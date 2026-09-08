@@ -51,8 +51,16 @@ export const executeMatchingEngine = async (request) => {
 
   // PHASE 1: Deterministic CSP Hard Filtering
   const activeProviders = await Provider.find({
-    $or: [{ category }, { serviceCategories: category }],
     isActive: true,
+    $and: [
+      { $or: [{ category }, { serviceCategories: category }] },
+      {
+        $or: [
+          { approvalStatus: "APPROVED" },
+          { approvalStatus: { $exists: false } },
+        ],
+      },
+    ],
   }).lean();
 
   const candidatePool = [];

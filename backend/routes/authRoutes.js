@@ -21,7 +21,17 @@ const buildToken = (user) =>
 
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password, role, phoneNumber, category, serviceCategories } = req.body;
+    const {
+      fullName,
+      email,
+      password,
+      role,
+      phoneNumber,
+      category,
+      serviceCategories,
+      hourlyRate,
+      location,
+    } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({
@@ -39,21 +49,38 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    const requestedRole = role === "PROVIDER" ? "PROVIDER" : "CUSTOMER";
+
+    if (requestedRole === "PROVIDER") {
+      const parsedRate = Number(hourlyRate);
+      if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Providers must submit a valid hourly rate greater than zero.",
+        });
+      }
+    }
+
     const user = await User.create({
       fullName: String(fullName).trim(),
       email: normalizedEmail,
       passwordHash: await bcrypt.hash(password, 12),
-      role:
-        role && ["CUSTOMER", "PROVIDER", "ADMIN"].includes(role)
-          ? role
-          : "CUSTOMER",
+      role: requestedRole,
       phoneNumber: phoneNumber || "",
     });
 
     if (user.role === "PROVIDER") {
-      const selectedCategory = category || (Array.isArray(serviceCategories) && serviceCategories[0]) || "Appliance & Gadget Repair";
-      const categoriesList = Array.isArray(serviceCategories) && serviceCategories.length > 0 ? serviceCategories : [selectedCategory];
-      
+      const selectedCategory =
+        category ||
+        (Array.isArray(serviceCategories) && serviceCategories[0]) ||
+        "Appliance & Gadget Repair";
+      const categoriesList =
+        Array.isArray(serviceCategories) && serviceCategories.length > 0
+          ? serviceCategories
+          : [selectedCategory];
+      const providerRate = Number(hourlyRate);
+      const providerLocation = location || { lat: 25.782, lng: 88.895 };
+
       await Provider.findOneAndUpdate(
         { email: normalizedEmail },
         {
@@ -62,10 +89,19 @@ router.post("/register", async (req, res) => {
           email: normalizedEmail,
           category: selectedCategory,
           serviceCategories: categoriesList,
-          hourlyRate: 600,
-          quotedRate: 600,
-          location: { lat: 25.782, lng: 88.895 },
-          isActive: true,
+          hourlyRate:
+            Number.isFinite(providerRate) && providerRate >= 0
+              ? providerRate
+              : 0,
+          quotedRate:
+            Number.isFinite(providerRate) && providerRate >= 0
+              ? providerRate
+              : 0,
+          location: providerLocation,
+          approvalStatus: "PENDING",
+          isActive: false,
+          approvedAt: null,
+          approvedBy: null,
           rating: 5,
           skills: categoriesList.map((name) => ({ name, expertiseTier: 1 })),
         },
@@ -94,7 +130,7 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password, category } = req.body;
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -112,17 +148,6 @@ router.post("/login", async (req, res) => {
         success: false,
         error: "Invalid email or password.",
       });
-    }
-
-    if (user.role === "PROVIDER" && category) {
-      await Provider.findOneAndUpdate(
-        { userId: user._id },
-        {
-          $set: { category },
-          $addToSet: { serviceCategories: category },
-        },
-        { upsert: false },
-      );
     }
 
     const token = buildToken(user);

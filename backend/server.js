@@ -7,6 +7,7 @@ import matchRoutes from "./routes/matchRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import providerRoutes from "./routes/providerRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 try {
   dns.setServers(["8.8.8.8", "1.1.1.1"]);
@@ -36,6 +37,7 @@ app.use((req, res, next) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/providers", providerRoutes);
+app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/match", matchRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 

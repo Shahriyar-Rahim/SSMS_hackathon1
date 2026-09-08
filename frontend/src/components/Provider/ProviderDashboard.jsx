@@ -13,6 +13,8 @@ export default function ProviderDashboard() {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [hourlyRate, setHourlyRate] = useState(600);
+  const [latitude, setLatitude] = useState(25.7801);
+  const [longitude, setLongitude] = useState(88.8916);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -34,6 +36,8 @@ export default function ProviderDashboard() {
       setCategories(availableCategories);
       setSelectedCategories(provider.serviceCategories || [provider.category]);
       setHourlyRate(provider.hourlyRate || 600);
+      setLatitude(provider.location?.lat || 25.7801);
+      setLongitude(provider.location?.lng || 88.8916);
     } catch (err) {
       console.error("Failed to load provider dashboard:", err);
     } finally {
@@ -91,7 +95,7 @@ export default function ProviderDashboard() {
       const updated = await updateProviderProfileAPI({
         serviceCategories: selectedCategories,
         hourlyRate,
-        isActive: profile?.isActive,
+        location: { lat: latitude, lng: longitude },
       });
       setProfile(updated);
       setProfileMessage("Service preferences saved.");
@@ -140,7 +144,13 @@ export default function ProviderDashboard() {
           <span
             className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${profile?.isActive ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10" : "text-rose-300 border-rose-500/30 bg-rose-500/10"}`}
           >
-            {profile?.isActive ? "Available for requests" : "Paused"}
+            {profile?.approvalStatus === "PENDING"
+              ? "Awaiting admin approval"
+              : profile?.approvalStatus === "REJECTED"
+                ? "Rejected by admin"
+                : profile?.isActive
+                  ? "Approved and available"
+                  : "Deactivated by admin"}
           </span>
         </div>
 
@@ -182,6 +192,28 @@ export default function ProviderDashboard() {
           {profileMessage && (
             <span className="text-xs text-slate-400">{profileMessage}</span>
           )}
+        </div>
+        <div className="mt-4 grid max-w-md grid-cols-2 gap-3">
+          <label className="text-xs font-semibold text-slate-400">
+            Latitude
+            <input
+              type="number"
+              step="any"
+              value={latitude}
+              onChange={(event) => setLatitude(event.target.value)}
+              className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+            />
+          </label>
+          <label className="text-xs font-semibold text-slate-400">
+            Longitude
+            <input
+              type="number"
+              step="any"
+              value={longitude}
+              onChange={(event) => setLongitude(event.target.value)}
+              className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+            />
+          </label>
         </div>
       </section>
 

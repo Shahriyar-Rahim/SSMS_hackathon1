@@ -30,7 +30,7 @@ router.patch(
   authorizeRoles("PROVIDER"),
   async (req, res) => {
     try {
-      const { serviceCategories, hourlyRate, isActive } = req.body;
+      const { serviceCategories, hourlyRate, location } = req.body;
       const normalizedCategories = Array.isArray(serviceCategories)
         ? [
             ...new Set(
@@ -67,7 +67,17 @@ router.patch(
         update.hourlyRate = parsedRate;
         update.quotedRate = parsedRate;
       }
-      if (isActive !== undefined) update.isActive = Boolean(isActive);
+      if (location !== undefined) {
+        const latitude = Number(location.lat);
+        const longitude = Number(location.lng);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return res.status(400).json({
+            success: false,
+            error: "Valid latitude and longitude are required.",
+          });
+        }
+        update.location = { lat: latitude, lng: longitude };
+      }
 
       const provider = await Provider.findOneAndUpdate(
         { userId: req.user.id },

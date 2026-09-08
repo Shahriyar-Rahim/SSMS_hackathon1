@@ -7,7 +7,20 @@ const router = express.Router();
 
 router.get("/categories", authenticate, async (req, res) => {
   try {
-    const categories = await Provider.distinct("category", { isActive: true });
+    const categoryFilter =
+      req.user.role === "PROVIDER"
+        ? {}
+        : {
+            isActive: true,
+            $or: [
+              { approvalStatus: "APPROVED" },
+              { approvalStatus: { $exists: false } },
+            ],
+          };
+    const categories = await Provider.distinct(
+      "serviceCategories",
+      categoryFilter,
+    );
 
     const ICON_MAP = {
       Electrical: "Zap",
