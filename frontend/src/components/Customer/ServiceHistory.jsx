@@ -3,13 +3,15 @@ import { History, Star, Download, FileText, CheckCircle2, MessageSquare, Sparkle
 import { Badge } from '../Shared/Badge';
 import { Modal } from '../Shared/Modal';
 
-export const ServiceHistory = ({ requests, onSubmitRating }) => {
+export const ServiceHistory = ({ requests = [], onSubmitRating }) => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [ratingModalReq, setRatingModalReq] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [feedbackText, setFeedbackText] = useState('');
 
-  const completedRequests = requests.filter(r => r.status === 'Completed');
+  const completedRequests = requests.filter(
+    (r) => r.status === 'COMPLETED' || r.status === 'Completed',
+  );
 
   const handleOpenRating = (req) => {
     setRatingModalReq(req);
@@ -48,52 +50,69 @@ export const ServiceHistory = ({ requests, onSubmitRating }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {completedRequests.map(req => (
-            <div key={req.id} className="bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl p-5 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100/90 px-2.5 py-0.5 rounded-md border border-slate-200/60">
-                    {req.id}
-                  </span>
-                  <Badge status="Completed" size="sm" />
-                  <span className="text-xs text-slate-400 font-medium">
-                    Completed on {req.completedAt ? new Date(req.completedAt).toLocaleDateString() : req.preferredDate}
-                  </span>
+          {completedRequests.map((req) => {
+            const bookingId = req._id || req.id || "JOB_101";
+            const serviceName = req.serviceCategory || req.serviceName || "Home Service";
+            const providerName = req.providerId?.fullName || req.providerName || "Assigned Technician";
+            const totalPrice = req.totalPrice || req.estimatedCharge || 500;
+            const completedDate = req.updatedAt || req.createdAt ? new Date(req.updatedAt || req.createdAt).toLocaleDateString() : "Recently";
+
+            return (
+              <div key={bookingId} className="bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-2xl p-5 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100/90 px-2.5 py-0.5 rounded-md border border-slate-200/60">
+                      {bookingId.toString().substring(0, 10)}...
+                    </span>
+                    <Badge status="Completed" size="sm" />
+                    <span className="text-xs text-slate-400 font-medium">
+                      Completed on {completedDate}
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-slate-900 text-base">{serviceName}</h3>
+                  <p className="text-xs text-slate-600 font-medium">
+                    Provider: <strong className="text-slate-900">{providerName}</strong> • Service Zone: Saidpur/BAUST
+                  </p>
+
+                  {req.rating ? (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold pt-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      <span>{req.rating}/5 Rating</span>
+                      {req.feedback && <span className="text-slate-500 font-normal italic ml-1">"{req.feedback}"</span>}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenRating(req)}
+                      className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 pt-1"
+                    >
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" /> Leave Rating & Feedback
+                    </button>
+                  )}
                 </div>
 
-                <h3 className="font-bold text-slate-900 text-base">{req.serviceName}</h3>
-                <p className="text-xs text-slate-600 font-medium">
-                  Provider: <strong className="text-slate-900">{req.providerName}</strong> • Location: {req.location}
-                </p>
+                <div className="flex sm:flex-col items-end justify-between sm:justify-center border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0">
+                  <span className="text-lg font-extrabold text-slate-900 mb-2">৳{totalPrice}</span>
 
-                {req.rating ? (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold pt-1">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span>{req.rating}/5 Rating</span>
-                    {req.feedback && <span className="text-slate-500 font-normal italic ml-1">"{req.feedback}"</span>}
-                  </div>
-                ) : (
                   <button
-                    onClick={() => handleOpenRating(req)}
-                    className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 pt-1"
+                    onClick={() => setSelectedInvoice({
+                      ...req,
+                      id: bookingId,
+                      serviceName,
+                      providerName,
+                      estimatedCharge: totalPrice,
+                      customerName: req.customerName || "Valued Customer",
+                      location: "BAUST / Saidpur Zone",
+                      createdAt: req.createdAt || new Date(),
+                    })}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
                   >
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" /> Leave Rating & Feedback
+                    <FileText className="w-3.5 h-3.5 text-blue-600" /> View Official Invoice
                   </button>
-                )}
+                </div>
               </div>
-
-              <div className="flex sm:flex-col items-end justify-between sm:justify-center border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0">
-                <span className="text-lg font-extrabold text-slate-900 mb-2">৳{req.estimatedCharge}</span>
-
-                <button
-                  onClick={() => setSelectedInvoice(req)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-600" /> View Official Invoice
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

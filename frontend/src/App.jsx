@@ -4,6 +4,7 @@ import CategoryGrid from "./components/Customer/CategoryGrid";
 import ServiceRequestForm from "./components/Customer/ServiceRequestForm";
 import ProviderMatch from "./components/Customer/ProviderMatch";
 import RequestTracker from "./components/Customer/RequestTracker";
+import { ServiceHistory } from "./components/Customer/ServiceHistory";
 import ProviderDashboard from "./components/Provider/ProviderDashboard";
 import AdminDashboard from "./components/Admin/AdminDashboard";
 import {
@@ -13,6 +14,7 @@ import {
   fetchBookingsAPI,
   loginUserAPI,
   registerUserAPI,
+  updateBookingStatusAPI,
 } from "./services/apiService";
 
 const DEFAULT_REQUEST = {
@@ -248,34 +250,77 @@ export default function App() {
     }
   };
 
+  const handleCustomerUpdateBookingStatus = async (
+    bookingId,
+    payloadOrStatus,
+    extraPayload = {},
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await updateBookingStatusAPI(
+        bookingId,
+        payloadOrStatus,
+        extraPayload,
+      );
+      await loadInitialData();
+      if (result.booking) {
+        setSelectedBooking(result.booking);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to respond to proposed rate change.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!authToken || !authUser) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl">
+      <div className="min-h-screen bg-gradient-to-br from-amber-950 via-stone-900 to-stone-950 text-slate-100 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md rounded-3xl border border-amber-500/20 bg-stone-900/95 p-8 shadow-2xl shadow-amber-500/10 backdrop-blur-md">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 font-bold text-white">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-600 to-orange-600 font-bold text-white shadow-lg shadow-amber-500/25">
               S
             </div>
-            <h1 className="text-2xl font-bold">SmartService Access</h1>
-            <p className="mt-2 text-sm text-slate-400">
-              Secure dispatcher portal
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              SmartService Portal
+            </h1>
+            <p className="mt-1 text-xs text-amber-200/80 font-medium">
+              {authMode === "login"
+                ? "Sign in with your email and password"
+                : "Create a new Customer or Provider account"}
             </p>
           </div>
 
-          <div className="mb-5 flex rounded-xl border border-slate-700 bg-slate-800/60 p-1">
+          {/* Sub-tabs: Login / Register */}
+          <div className="mb-6 flex rounded-xl border border-stone-800 bg-stone-950/80 p-1">
             <button
               type="button"
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${authMode === "login" ? "bg-indigo-600 text-white" : "text-slate-300"}`}
-              onClick={() => setAuthMode("login")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                authMode === "login"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              onClick={() => {
+                setAuthMode("login");
+                setAuthError("");
+              }}
             >
-              Login
+              Sign In
             </button>
             <button
               type="button"
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${authMode === "register" ? "bg-indigo-600 text-white" : "text-slate-300"}`}
-              onClick={() => setAuthMode("register")}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                authMode === "register"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              onClick={() => {
+                setAuthMode("register");
+                setAuthError("");
+              }}
             >
-              Register
+              Create Account
             </button>
           </div>
 
@@ -283,99 +328,32 @@ export default function App() {
             {authMode === "register" && (
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-300">
-                  Full name
+                  Full Name
                 </label>
                 <input
+                  required
                   value={authForm.fullName}
                   onChange={(e) =>
                     setAuthForm({ ...authForm, fullName: e.target.value })
                   }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                  placeholder="Your full name"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                  placeholder="e.g. Tariqul Hasan"
                 />
-              </div>
-            )}
-
-            {authMode === "register" && authForm.role === "PROVIDER" && (
-              <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-300">
-                    Primary service
-                  </label>
-                  <select
-                    value={authForm.category}
-                    onChange={(e) =>
-                      setAuthForm({ ...authForm, category: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                  >
-                    <option>Appliance &amp; Gadget Repair</option>
-                    <option>Plumbing Services</option>
-                    <option>Electrical Repair &amp; Installation</option>
-                    <option>Cleaning &amp; Sanitization</option>
-                    <option>HVAC &amp; AC Maintenance</option>
-                    <option>Carpentry &amp; Furniture Repair</option>
-                    <option>Car &amp; Vehicle Maintenance</option>
-                    <option>Smart Home &amp; Security Systems</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-300">
-                    Your hourly rate
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={authForm.hourlyRate}
-                    onChange={(e) =>
-                      setAuthForm({ ...authForm, hourlyRate: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                    placeholder="Example: 600"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={authForm.latitude}
-                    onChange={(e) =>
-                      setAuthForm({ ...authForm, latitude: e.target.value })
-                    }
-                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                    placeholder="Latitude"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={authForm.longitude}
-                    onChange={(e) =>
-                      setAuthForm({ ...authForm, longitude: e.target.value })
-                    }
-                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                    placeholder="Longitude"
-                  />
-                </div>
-                <p className="text-xs text-amber-300">
-                  Your profile will remain pending until an admin approves it.
-                </p>
               </div>
             )}
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-300">
-                Email
+                Email Address
               </label>
               <input
                 type="email"
+                required
                 value={authForm.email}
                 onChange={(e) =>
                   setAuthForm({ ...authForm, email: e.target.value })
                 }
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
                 placeholder="name@example.com"
               />
             </div>
@@ -386,44 +364,106 @@ export default function App() {
               </label>
               <input
                 type="password"
+                required
                 value={authForm.password}
                 onChange={(e) =>
                   setAuthForm({ ...authForm, password: e.target.value })
                 }
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                placeholder="Password"
+                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                placeholder="••••••••"
               />
             </div>
 
+            {/* REGISTER-ONLY: ROLE & PROVIDER SPECIALIZATION / POSITION SELECTOR */}
             {authMode === "register" && (
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-300">
-                  Role
-                </label>
-                <select
-                  value={authForm.role}
-                  onChange={(e) =>
-                    setAuthForm({ ...authForm, role: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                >
-                  <option value="CUSTOMER">Customer</option>
-                  <option value="PROVIDER">Provider</option>
-                </select>
+              <div className="space-y-4 pt-2 border-t border-slate-800">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-300">
+                    Account Type (Role)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-800 rounded-xl border border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => setAuthForm({ ...authForm, role: "CUSTOMER" })}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                        authForm.role === "CUSTOMER"
+                          ? "bg-blue-600 text-white shadow-2xs"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      👤 Customer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthForm({ ...authForm, role: "PROVIDER" })}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                        authForm.role === "PROVIDER"
+                          ? "bg-indigo-600 text-white shadow-2xs"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      🛠️ Provider
+                    </button>
+                  </div>
+                </div>
+
+                {authForm.role === "PROVIDER" && (
+                  <div className="space-y-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-indigo-200">
+                        🛠️ Primary Service Position / Specialization
+                      </label>
+                      <select
+                        value={authForm.category}
+                        onChange={(e) =>
+                          setAuthForm({ ...authForm, category: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-indigo-400/40 bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-white outline-none focus:border-indigo-400"
+                      >
+                        <option>Appliance &amp; Gadget Repair</option>
+                        <option>Plumbing Services</option>
+                        <option>Electrical Repair &amp; Installation</option>
+                        <option>Cleaning &amp; Sanitization</option>
+                        <option>HVAC &amp; AC Maintenance</option>
+                        <option>Carpentry &amp; Furniture Repair</option>
+                        <option>Car &amp; Vehicle Maintenance</option>
+                        <option>Smart Home &amp; Security Systems</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-indigo-200">
+                        Standard Hourly Rate (৳/hr)
+                      </label>
+                      <input
+                        type="number"
+                        min="100"
+                        value={authForm.hourlyRate || 600}
+                        onChange={(e) =>
+                          setAuthForm({ ...authForm, hourlyRate: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-indigo-400/40 bg-slate-900 px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-400"
+                        placeholder="e.g. 600"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {authError && (
-              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                {authError}
+              <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5 text-xs text-red-200">
+                ⚠️ {authError}
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-500"
+              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-all active:scale-[0.99]"
             >
-              {authMode === "login" ? "Login" : "Create account"}
+              {authMode === "login"
+                ? "Sign In to Account"
+                : `Register as ${authForm.role === "PROVIDER" ? "Provider" : "Customer"}`}
             </button>
           </form>
         </div>
@@ -448,17 +488,11 @@ export default function App() {
             (b) => b.status !== "COMPLETED" && b.status !== "CANCELLED",
           ).length
         }
+        authUser={authUser}
+        onLogout={clearAuthSession}
       />
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-end">
-          <button
-            onClick={clearAuthSession}
-            className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200"
-          >
-            Logout
-          </button>
-        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-900/50 border border-red-500 rounded-xl text-red-200 text-sm flex items-center justify-between">
@@ -503,14 +537,24 @@ export default function App() {
               />
             )}
 
-            {(customerTab === "track" || step === 4) && (
+            {(customerTab === "track" || (customerTab === "book" && step === 4)) && (
               <RequestTracker
                 bookings={activeBookings}
                 selectedBooking={selectedBooking}
                 onSelectBooking={setSelectedBooking}
+                onUpdateStatus={handleCustomerUpdateBookingStatus}
                 onNewBooking={() => {
                   setCustomerTab("book");
                   setStep(1);
+                }}
+              />
+            )}
+
+            {customerTab === "history" && (
+              <ServiceHistory
+                requests={activeBookings}
+                onSubmitRating={(bookingId, rating, feedback) => {
+                  console.log("Rating submitted:", bookingId, rating, feedback);
                 }}
               />
             )}

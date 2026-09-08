@@ -26,23 +26,47 @@ const SERVICE_OPTIONS = {
     "Washing Machine Repair",
     "Microwave Repair",
   ],
-  Electrical: [
+  "Plumbing Services": [
+    "Pipe Leakage Repair",
+    "Tap Installation",
+    "Drain Cleaning",
+    "Water Tank Fitting",
+  ],
+  "Electrical Repair & Installation": [
     "Fan Repair",
     "Switchboard Fix",
     "Wiring Repair",
     "Lighting Installation",
   ],
-  Plumbing: [
-    "Pipe Leakage Repair",
-    "Tap Installation",
-    "Drain Cleaning",
-    "Water Heater Fix",
-  ],
-  "Cleaning & Pest Control": [
-    "Deep Cleaning",
-    "Pest Control",
+  "Cleaning & Sanitization": [
+    "Deep House Cleaning",
+    "Pest Treatment",
     "Sofa Cleaning",
-    "Water Tank Cleaning",
+    "Water Tank Clean",
+  ],
+  "HVAC & AC Maintenance": [
+    "AC Gas Refill",
+    "AC Master Servicing",
+    "Cooling Diagnostic",
+    "Compressor Fix",
+  ],
+  "Carpentry & Furniture Repair": [
+    "Door Lock Repair",
+    "Cabinet Modification",
+    "Furniture Assembly",
+    "Hinge Fix",
+  ],
+  "Car & Vehicle Maintenance": [
+    "Engine Diagnostic",
+    "Battery Jumpstart",
+    "Oil & Filter Change",
+    "Brake Check",
+  ],
+  "Smart Home & Security Systems": [
+    "CCTV Camera Setup",
+    "Smart Lock Installation",
+    "WiFi Router Setup",
+    "Biometric Lock",
   ],
 };
 

@@ -3,6 +3,7 @@ import {
   createBooking,
   updateBookingStatus,
   getBookings,
+  clearAllBookings,
 } from "../controllers/bookingController.js";
 import { authenticate, authorizeRoles } from "../middleware/auth.js";
 
@@ -16,5 +17,11 @@ router.post(
 );
 router.get("/", authenticate, getBookings);
 router.patch("/:id/status", authenticate, updateBookingStatus);
+router.delete(
+  "/clear-all",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  clearAllBookings,
+);
 
 export default router;

@@ -253,3 +253,14 @@ export const updateProviderApprovalAPI = async (providerId, payload) => {
     throw new Error(data.error || "Failed to update provider approval");
   return data.provider;
 };
+
+export const clearAllBookingsAPI = async () => {
+  const response = await fetch(`${API_BASE_URL}/bookings/clear-all`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  const data = await response.json();
+  if (!data.success)
+    throw new Error(data.error || "Failed to clear work timeline");
+  return data;
+};

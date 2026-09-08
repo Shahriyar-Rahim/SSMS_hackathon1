@@ -116,7 +116,7 @@ export const updateBookingStatus = async (req, res) => {
 
     // Role-based authorization check
     if (req.user.role === "CUSTOMER") {
-      if (booking.customerId !== req.user.id.toString()) {
+      if (booking.customerId.toString() !== req.user.id.toString()) {
         return res.status(403).json({
           success: false,
           error: "ACCESS_DENIED: You can only manage your own bookings.",
@@ -327,6 +327,26 @@ export const getBookings = async (req, res) => {
     res.status(200).json({ success: true, count: bookings.length, bookings });
   } catch (error) {
     console.error("Error fetching bookings:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 4. Clear All Bookings (Admin feature to wipe work timeline)
+export const clearAllBookings = async (req, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        error: "ACCESS_DENIED: Only Admin can clear the system timeline.",
+      });
+    }
+    await Booking.deleteMany({});
+    res.status(200).json({
+      success: true,
+      message: "SYSTEM_TIMELINE_CLEARED: All work timeline bookings cleared successfully.",
+    });
+  } catch (error) {
+    console.error("Error clearing bookings:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

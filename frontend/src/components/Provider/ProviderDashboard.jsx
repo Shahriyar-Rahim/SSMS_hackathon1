@@ -357,20 +357,41 @@ export default function ProviderDashboard() {
                     </>
                   )}
                   {b.status === "ACCEPTED" && (
+                    <div className="flex flex-wrap gap-2 w-full">
+                      <button
+                        onClick={() => handleAction(b._id, "ON_THE_WAY")}
+                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        🚗 On the Way
+                      </button>
+                      <button
+                        onClick={() => handleAction(b._id, "IN_PROGRESS")}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        🛠️ Start Service Work
+                      </button>
+                    </div>
+                  )}
+                  {b.status === "ON_THE_WAY" && (
                     <button
                       onClick={() => handleAction(b._id, "IN_PROGRESS")}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-xs"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1"
                     >
-                      Start service
+                      🛠️ Arrived & Start Service Work
                     </button>
                   )}
                   {b.status === "IN_PROGRESS" && (
                     <button
                       onClick={() => handleAction(b._id, "COMPLETED")}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs"
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1"
                     >
-                      Mark completed
+                      ✅ Mark Service Completed
                     </button>
+                  )}
+                  {b.status === "COMPLETED" && (
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/30">
+                      ✓ Job Completed & Invoice Issued
+                    </span>
                   )}
                 </div>
               </div>

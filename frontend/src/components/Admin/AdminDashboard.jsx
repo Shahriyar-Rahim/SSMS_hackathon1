@@ -3,12 +3,14 @@ import {
   fetchAdminProvidersAPI,
   fetchBookingsAPI,
   updateProviderApprovalAPI,
+  clearAllBookingsAPI,
 } from "../../services/apiService";
 
 const AdminDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [providers, setProviders] = useState([]);
   const [providerAction, setProviderAction] = useState("");
 
@@ -48,6 +50,27 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleClearTimeline = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to clear all work timeline bookings from the admin panel?",
+      )
+    ) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await clearAllBookingsAPI();
+      setBookings([]);
+      setSuccessMsg("Work timeline cleared successfully.");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (err) {
+      setError(err.message || "Failed to clear work timeline.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto py-12 text-center text-slate-400">
@@ -58,13 +81,27 @@ const AdminDashboard = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-        <h2 className="text-2xl font-bold text-white">Admin Control Center</h2>
-        <p className="text-sm text-slate-400 mt-2">
-          Full oversight of customers, bookings, dispatch state, and provider
-          assignments.
-        </p>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Admin Control Center</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Full oversight of customers, bookings, dispatch state, and provider
+            assignments.
+          </p>
+        </div>
+        <button
+          onClick={handleClearTimeline}
+          className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 transition-colors shadow-2xs self-start md:self-auto"
+        >
+          🗑️ Clear Work Timeline
+        </button>
       </div>
+
+      {successMsg && (
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-300">
+          ✓ {successMsg}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">

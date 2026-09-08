@@ -17,6 +17,8 @@ const Navbar = ({
   customerTab,
   setCustomerTab,
   activeRequestsCount,
+  authUser,
+  onLogout,
 }) => {
   const canAccessAdmin = userRole === "ADMIN";
   const canAccessProvider = userRole === "PROVIDER" || canAccessAdmin;
@@ -143,6 +145,20 @@ const Navbar = ({
             ) : (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold shadow-2xs">
                 <User className="w-3.5 h-3.5 text-blue-600" /> Customer Portal
+              </div>
+            )}
+
+            {authUser && onLogout && (
+              <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80">
+                <span className="text-xs font-semibold text-slate-700 hidden sm:inline-block max-w-[120px] truncate">
+                  {authUser.fullName || authUser.email}
+                </span>
+                <button
+                  onClick={onLogout}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200/90 text-slate-700 rounded-lg text-xs font-bold transition-all shadow-2xs border border-slate-200/60"
+                >
+                  Logout
+                </button>
               </div>
             )}
           </div>

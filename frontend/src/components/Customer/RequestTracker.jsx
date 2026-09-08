@@ -343,42 +343,7 @@ const RequestTracker = ({
           </div>
         </div>
 
-        {/* Simulation Control Panel for Evaluation */}
-        {onUpdateStatus && (
-          <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-4.5 shadow-2xs">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-600" /> Demo Simulation
-                Toolbar
-              </span>
-              <span className="text-[11px] text-blue-700 font-medium">
-                Click to test live status progression
-              </span>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              {LIFECYCLE_STEPS.map((statusStep) => (
-                <button
-                  key={statusStep}
-                  disabled={currentStatusUI === statusStep}
-                  onClick={() =>
-                    onUpdateStatus(
-                      bookingId,
-                      statusStep.toUpperCase().replace(/\s+/g, "_"),
-                    )
-                  }
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    currentStatusUI === statusStep
-                      ? "bg-blue-600 text-white shadow-2xs cursor-default"
-                      : "bg-white text-slate-700 border border-slate-200/80 hover:border-blue-400 hover:text-blue-600 shadow-2xs"
-                  }`}
-                >
-                  Set: {statusStep}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
