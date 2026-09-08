@@ -130,17 +130,33 @@ export const updateBookingStatus = async (req, res) => {
         });
       }
     } else if (req.user.role === "PROVIDER") {
-      const provider = await Provider.findOne({ userId: req.user.id });
+      let provider = await Provider.findOne({ userId: req.user.id });
+      if (!provider) {
+        provider = await Provider.findOne({ email: req.user.email });
+        if (provider && !provider.userId) {
+          provider.userId = req.user.id;
+          await provider.save();
+        }
+      }
+      const bookingProviderIdStr = (
+        booking.providerId._id || booking.providerId
+      ).toString();
       if (
         !provider ||
-        booking.providerId.toString() !== provider._id.toString()
+        bookingProviderIdStr !== provider._id.toString()
       ) {
         return res.status(403).json({
           success: false,
           error: "ACCESS_DENIED: This booking is assigned to another provider.",
         });
       }
-    } else if (req.user.role !== "ADMIN") {
+    } else if (req.user.role === "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        error:
+          "ACCESS_DENIED: Admins cannot accept or perform jobs on behalf of service providers. Please log in as the assigned provider.",
+      });
+    } else {
       return res.status(403).json({
         success: false,
         error: "ACCESS_DENIED: Insufficient permissions.",
@@ -278,7 +294,14 @@ export const getBookings = async (req, res) => {
     }
 
     if (req.user.role === "PROVIDER") {
-      const provider = await Provider.findOne({ userId: req.user.id });
+      let provider = await Provider.findOne({ userId: req.user.id });
+      if (!provider) {
+        provider = await Provider.findOne({ email: req.user.email });
+        if (provider && !provider.userId) {
+          provider.userId = req.user.id;
+          await provider.save();
+        }
+      }
       if (!provider) {
         return res.status(403).json({
           success: false,

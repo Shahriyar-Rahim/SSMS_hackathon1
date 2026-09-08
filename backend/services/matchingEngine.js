@@ -49,24 +49,41 @@ export const executeMatchingEngine = async (request) => {
     minPrice = 300,
   } = request;
 
-  // PHASE 1: Deterministic CSP Hard Filtering
-  const activeProviders = await Provider.find({
+  // Extract core keywords from requested category for flexible matching
+  const categoryKeywords = String(category || "")
+    .toLowerCase()
+    .split(/[\s&,/]+/)
+    .filter((w) => w.length > 2);
+
+  // PHASE 1: Deterministic CSP Filtering
+  const allActive = await Provider.find({
     isActive: true,
-    $and: [
-      { $or: [{ category }, { serviceCategories: category }] },
-      {
-        $or: [
-          { approvalStatus: "APPROVED" },
-          { approvalStatus: { $exists: false } },
-        ],
-      },
+    $or: [
+      { approvalStatus: "APPROVED" },
+      { approvalStatus: { $exists: false } },
     ],
   }).lean();
+
+  const activeProviders = allActive.filter((p) => {
+    const pCats = [p.category, ...(p.serviceCategories || [])]
+      .filter(Boolean)
+      .map((c) => c.toLowerCase());
+
+    const isExact = pCats.some(
+      (c) => c === String(category).toLowerCase(),
+    );
+    if (isExact) return true;
+
+    // Check keyword overlap
+    return pCats.some((c) =>
+      categoryKeywords.some((kw) => c.includes(kw)),
+    );
+  });
 
   const candidatePool = [];
 
   for (const provider of activeProviders) {
-    // 1. Geofence Check
+    // 1. Geofence Check (with minimum 25km buffer to ensure candidate availability)
     const distanceKm = calculateHaversineDistance(
       location.lat,
       location.lng,
@@ -74,7 +91,8 @@ export const executeMatchingEngine = async (request) => {
       provider.location.lng,
     );
 
-    if (distanceKm > provider.maxRadiusKm) continue;
+    const maxRadius = Math.max(provider.maxRadiusKm || 15, 30);
+    if (distanceKm > maxRadius) continue;
 
     // 2. Schedule Overlap Check
     const hasConflict = await checkScheduleConflict(provider._id, start, end);

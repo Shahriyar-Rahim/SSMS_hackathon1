@@ -1,124 +1,316 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
+import { User } from "./models/User.js";
 import { Provider } from "./models/Provider.js";
 import { Booking } from "./models/Booking.js";
-import { User } from "./models/User.js";
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ssms";
 
-// Mock Providers centered around BAUST / Saidpur Campus Area
-const seedProviders = [
+// Rich Seed dataset with multiple providers for EVERY maintenance category centered around Saidpur / BAUST
+const providersData = [
+  // 1. Appliance & Gadget Repair
   {
-    fullName: "Kamal Hossain",
-    email: "kamal.elec@gmail.com",
-    category: "Electrical",
+    fullName: "Tariqul Hasan",
+    email: "provider@smartservice.com",
+    category: "Appliance & Gadget Repair",
+    serviceCategories: ["Appliance & Gadget Repair", "Electrical Repair & Installation"],
+    hourlyRate: 600,
     rating: 4.9,
-    hourlyRate: 450,
-    maxRadiusKm: 20,
-    location: { lat: 25.782, lng: 88.895 }, // ~0.5 km from BAUST
-    isActive: true,
-    approvalStatus: "APPROVED",
-    maxDailyCapacity: 6,
-    jobsCompletedToday: 2,
-    avgResponseTimeMin: 10,
-    skills: [
-      { name: "Electrical", expertiseTier: 1.0 },
-      { name: "Appliance Repair", expertiseTier: 0.8 },
-    ],
+    location: { lat: 25.782, lng: 88.895 },
   },
+  {
+    fullName: "Dulal Miah",
+    email: "dulal.appliance@gmail.com",
+    category: "Appliance & Gadget Repair",
+    serviceCategories: ["Appliance & Gadget Repair"],
+    hourlyRate: 550,
+    rating: 4.7,
+    location: { lat: 25.785, lng: 88.898 },
+  },
+  {
+    fullName: "Shamsul Haque",
+    email: "shamsul.gadget@gmail.com",
+    category: "Appliance & Gadget Repair",
+    serviceCategories: ["Appliance & Gadget Repair", "HVAC & AC Maintenance"],
+    hourlyRate: 500,
+    rating: 4.8,
+    location: { lat: 25.779, lng: 88.892 },
+  },
+
+  // 2. Plumbing Services
   {
     fullName: "Rafiqul Islam",
     email: "rafiq.plumb@gmail.com",
-    category: "Plumbing",
-    rating: 4.7,
+    category: "Plumbing Services",
+    serviceCategories: ["Plumbing Services"],
     hourlyRate: 400,
-    maxRadiusKm: 15,
-    location: { lat: 25.778, lng: 88.889 }, // ~0.4 km from BAUST
-    isActive: true,
-    approvalStatus: "APPROVED",
-    maxDailyCapacity: 5,
-    jobsCompletedToday: 1,
-    avgResponseTimeMin: 15,
-    skills: [{ name: "Plumbing", expertiseTier: 0.9 }],
+    rating: 4.7,
+    location: { lat: 25.778, lng: 88.889 },
   },
   {
-    fullName: "Tariqul Hasan",
-    email: "tariq.ac@gmail.com",
-    category: "Appliance & Gadget Repair",
-    rating: 4.8,
-    hourlyRate: 600,
-    maxRadiusKm: 25,
-    location: { lat: 25.785, lng: 88.9 }, // Saidpur Town (~1.2 km)
-    isActive: true,
-    approvalStatus: "APPROVED",
-    maxDailyCapacity: 4,
-    jobsCompletedToday: 0,
-    avgResponseTimeMin: 8,
-    skills: [
-      { name: "Appliance & Gadget Repair", expertiseTier: 1.0 },
-      { name: "Electrical", expertiseTier: 0.7 },
-    ],
+    fullName: "Kabir Hossain",
+    email: "kabir.plumb@gmail.com",
+    category: "Plumbing Services",
+    serviceCategories: ["Plumbing Services"],
+    hourlyRate: 450,
+    rating: 4.9,
+    location: { lat: 25.783, lng: 88.894 },
   },
   {
-    fullName: "Anowar Hossain",
-    email: "anowar.clean@gmail.com",
-    category: "Cleaning & Pest Control",
-    rating: 4.5,
-    hourlyRate: 350,
-    maxRadiusKm: 12,
-    location: { lat: 25.75, lng: 88.85 }, // Farther out (~6 km)
-    isActive: true,
-    approvalStatus: "APPROVED",
-    maxDailyCapacity: 8,
-    jobsCompletedToday: 4,
-    avgResponseTimeMin: 25,
-    skills: [{ name: "Cleaning & Pest Control", expertiseTier: 0.8 }],
+    fullName: "Sohel Rana",
+    email: "sohel.plumb@gmail.com",
+    category: "Plumbing Services",
+    serviceCategories: ["Plumbing Services"],
+    hourlyRate: 380,
+    rating: 4.6,
+    location: { lat: 25.781, lng: 88.888 },
+  },
+
+  // 3. Electrical Repair & Installation
+  {
+    fullName: "Kamal Hossain",
+    email: "kamal.elec@gmail.com",
+    category: "Electrical Repair & Installation",
+    serviceCategories: ["Electrical Repair & Installation", "Appliance & Gadget Repair"],
+    hourlyRate: 450,
+    rating: 4.9,
+    location: { lat: 25.782, lng: 88.895 },
   },
   {
     fullName: "Biplob Chandra",
     email: "biplob.elec@gmail.com",
-    category: "Electrical",
-    rating: 4.2,
-    hourlyRate: 320,
-    maxRadiusKm: 18,
+    category: "Electrical Repair & Installation",
+    serviceCategories: ["Electrical Repair & Installation"],
+    hourlyRate: 350,
+    rating: 4.5,
     location: { lat: 25.79, lng: 88.91 },
-    isActive: true,
-    approvalStatus: "APPROVED",
-    maxDailyCapacity: 6,
-    jobsCompletedToday: 1,
-    avgResponseTimeMin: 20,
-    skills: [{ name: "Electrical", expertiseTier: 0.6 }],
+  },
+  {
+    fullName: "Jahangir Alam",
+    email: "jahangir.elec@gmail.com",
+    category: "Electrical Repair & Installation",
+    serviceCategories: ["Electrical Repair & Installation"],
+    hourlyRate: 500,
+    rating: 4.8,
+    location: { lat: 25.78, lng: 88.891 },
+  },
+
+  // 4. Cleaning & Sanitization
+  {
+    fullName: "Anowar Hossain",
+    email: "anowar.clean@gmail.com",
+    category: "Cleaning & Sanitization",
+    serviceCategories: ["Cleaning & Sanitization"],
+    hourlyRate: 350,
+    rating: 4.6,
+    location: { lat: 25.75, lng: 88.85 },
+  },
+  {
+    fullName: "Rina Begum",
+    email: "rina.clean@gmail.com",
+    category: "Cleaning & Sanitization",
+    serviceCategories: ["Cleaning & Sanitization"],
+    hourlyRate: 400,
+    rating: 4.8,
+    location: { lat: 25.784, lng: 88.896 },
+  },
+  {
+    fullName: "Nazrul Islam",
+    email: "nazrul.clean@gmail.com",
+    category: "Cleaning & Sanitization",
+    serviceCategories: ["Cleaning & Sanitization"],
+    hourlyRate: 320,
+    rating: 4.5,
+    location: { lat: 25.78, lng: 88.89 },
+  },
+
+  // 5. HVAC & AC Maintenance
+  {
+    fullName: "Tanvir Ahmed",
+    email: "tanvir.hvac@gmail.com",
+    category: "HVAC & AC Maintenance",
+    serviceCategories: ["HVAC & AC Maintenance", "Appliance & Gadget Repair"],
+    hourlyRate: 700,
+    rating: 4.9,
+    location: { lat: 25.783, lng: 88.897 },
+  },
+  {
+    fullName: "Farhan Masud",
+    email: "farhan.ac@gmail.com",
+    category: "HVAC & AC Maintenance",
+    serviceCategories: ["HVAC & AC Maintenance"],
+    hourlyRate: 650,
+    rating: 4.7,
+    location: { lat: 25.786, lng: 88.902 },
+  },
+  {
+    fullName: "Mostafa Kamal",
+    email: "mostafa.ac@gmail.com",
+    category: "HVAC & AC Maintenance",
+    serviceCategories: ["HVAC & AC Maintenance"],
+    hourlyRate: 600,
+    rating: 4.8,
+    location: { lat: 25.781, lng: 88.893 },
+  },
+
+  // 6. Carpentry & Furniture Repair
+  {
+    fullName: "Habib Rahman",
+    email: "habib.carpenter@gmail.com",
+    category: "Carpentry & Furniture Repair",
+    serviceCategories: ["Carpentry & Furniture Repair"],
+    hourlyRate: 550,
+    rating: 4.7,
+    location: { lat: 25.779, lng: 88.893 },
+  },
+  {
+    fullName: "Mizanur Rahman",
+    email: "mizan.wood@gmail.com",
+    category: "Carpentry & Furniture Repair",
+    serviceCategories: ["Carpentry & Furniture Repair"],
+    hourlyRate: 500,
+    rating: 4.6,
+    location: { lat: 25.784, lng: 88.891 },
+  },
+  {
+    fullName: "Abdul Kaddus",
+    email: "kaddus.carpenter@gmail.com",
+    category: "Carpentry & Furniture Repair",
+    serviceCategories: ["Carpentry & Furniture Repair"],
+    hourlyRate: 480,
+    rating: 4.8,
+    location: { lat: 25.782, lng: 88.897 },
+  },
+
+  // 7. Car & Vehicle Maintenance
+  {
+    fullName: "Jamil Hossain",
+    email: "jamil.auto@gmail.com",
+    category: "Car & Vehicle Maintenance",
+    serviceCategories: ["Car & Vehicle Maintenance"],
+    hourlyRate: 600,
+    rating: 4.8,
+    location: { lat: 25.783, lng: 88.895 },
+  },
+  {
+    fullName: "Rashid Khan",
+    email: "rashid.garage@gmail.com",
+    category: "Car & Vehicle Maintenance",
+    serviceCategories: ["Car & Vehicle Maintenance"],
+    hourlyRate: 550,
+    rating: 4.6,
+    location: { lat: 25.78, lng: 88.892 },
+  },
+
+  // 8. Smart Home & Security Systems
+  {
+    fullName: "Arifur Rahman",
+    email: "arif.security@gmail.com",
+    category: "Smart Home & Security Systems",
+    serviceCategories: ["Smart Home & Security Systems", "Electrical Repair & Installation"],
+    hourlyRate: 800,
+    rating: 4.9,
+    location: { lat: 25.785, lng: 88.899 },
+  },
+  {
+    fullName: "Mahmudul Hasan",
+    email: "mahmud.cctv@gmail.com",
+    category: "Smart Home & Security Systems",
+    serviceCategories: ["Smart Home & Security Systems"],
+    hourlyRate: 750,
+    rating: 4.8,
+    location: { lat: 25.781, lng: 88.894 },
   },
 ];
 
-const seedData = async () => {
+const seedAll = async () => {
   try {
     await mongoose.connect(MONGO_URI);
-    console.log("[Seed] Connected to MongoDB");
+    console.log("[Seed] Connected to MongoDB:", MONGO_URI);
 
-    await Provider.deleteMany({});
-    await Booking.deleteMany({});
+    const passwordHash = await bcrypt.hash("123456", 12);
+    const adminPasswordHash = await bcrypt.hash("12345678", 12);
 
-    console.log("[Seed] Cleaned existing collections");
-
-    const linkedProviders = await Promise.all(
-      seedProviders.map(async (provider) => {
-        const user = await User.findOne({ email: provider.email });
-        return user ? { ...provider, userId: user._id } : provider;
-      }),
+    // 1. Ensure Admin User exists
+    await User.findOneAndUpdate(
+      { email: "admin@gmail.com" },
+      {
+        fullName: "System Administrator",
+        email: "admin@gmail.com",
+        passwordHash: adminPasswordHash,
+        role: "ADMIN",
+        phoneNumber: "+8801700000000",
+        location: { lat: 25.782, lng: 88.895 },
+      },
+      { upsert: true, new: true },
     );
+    console.log("[Seed] Admin user created/updated: admin@gmail.com");
 
-    const createdProviders = await Provider.insertMany(linkedProviders);
-    console.log(`[Seed] Inserted ${createdProviders.length} mock providers.`);
+    // 2. Ensure Test Customer User exists
+    const customer = await User.findOneAndUpdate(
+      { email: "customer@smartservice.com" },
+      {
+        fullName: "Test Customer",
+        email: "customer@smartservice.com",
+        passwordHash,
+        role: "CUSTOMER",
+        phoneNumber: "+8801700000001",
+        location: { lat: 25.7801, lng: 88.8916 },
+      },
+      { upsert: true, new: true },
+    );
+    console.log("[Seed] Customer user created/updated: customer@smartservice.com");
 
-    console.log("[Seed] Seed completed successfully!");
+    // 3. Seed Provider Users & Provider Documents
+    let providerCount = 0;
+    for (const p of providersData) {
+      const user = await User.findOneAndUpdate(
+        { email: p.email },
+        {
+          fullName: p.fullName,
+          email: p.email,
+          passwordHash,
+          role: "PROVIDER",
+          phoneNumber: "+8801700000" + Math.floor(100 + Math.random() * 900),
+          location: p.location,
+        },
+        { upsert: true, new: true },
+      );
+
+      await Provider.findOneAndUpdate(
+        { email: p.email },
+        {
+          userId: user._id,
+          fullName: p.fullName,
+          email: p.email,
+          category: p.category,
+          serviceCategories: p.serviceCategories,
+          hourlyRate: p.hourlyRate,
+          quotedRate: p.hourlyRate,
+          rating: p.rating,
+          location: p.location,
+          isActive: true,
+          maxRadiusKm: 30,
+          maxDailyCapacity: 8,
+          jobsCompletedToday: 0,
+          avgResponseTimeMin: 10,
+          skills: p.serviceCategories.map((cat) => ({ name: cat, expertiseTier: 1.0 })),
+        },
+        { upsert: true, new: true },
+      );
+      providerCount++;
+    }
+
+    console.log(`[Seed] Successfully seeded ${providerCount} providers across all 8 maintenance categories!`);
+    console.log("[Seed] Done!");
     process.exit(0);
-  } catch (error) {
-    console.error("[Seed Error]", error);
+  } catch (err) {
+    console.error("[Seed Error]", err);
     process.exit(1);
   }
 };
 
-seedData();
+seedAll();

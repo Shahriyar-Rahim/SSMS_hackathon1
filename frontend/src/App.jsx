@@ -309,10 +309,14 @@ export default function App() {
                     }
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
                   >
-                    <option>Electrical</option>
-                    <option>Plumbing</option>
                     <option>Appliance &amp; Gadget Repair</option>
-                    <option>Cleaning &amp; Pest Control</option>
+                    <option>Plumbing Services</option>
+                    <option>Electrical Repair &amp; Installation</option>
+                    <option>Cleaning &amp; Sanitization</option>
+                    <option>HVAC &amp; AC Maintenance</option>
+                    <option>Carpentry &amp; Furniture Repair</option>
+                    <option>Car &amp; Vehicle Maintenance</option>
+                    <option>Smart Home &amp; Security Systems</option>
                   </select>
                 </div>
                 <div>
