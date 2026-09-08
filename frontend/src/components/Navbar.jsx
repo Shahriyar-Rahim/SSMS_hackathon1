@@ -1,7 +1,7 @@
 import React from 'react';
 import { Home, Wrench, Clock, History, Shield, User, Store, Sparkles } from 'lucide-react';
 
-export const Navbar = ({ activeRole, setActiveRole, customerTab, setCustomerTab, activeRequestsCount }) => {
+export default Navbar = ({ activeRole, setActiveRole, customerTab, setCustomerTab, activeRequestsCount }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

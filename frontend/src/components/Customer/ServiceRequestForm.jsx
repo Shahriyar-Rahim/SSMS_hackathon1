@@ -10,7 +10,7 @@ const TIME_SLOTS = [
   "05:00 PM - 07:00 PM"
 ];
 
-export const ServiceRequestForm = ({ category, locations, onBack, onSubmitRequest }) => {
+export default ServiceRequestForm = ({ category, locations, onBack, onSubmitRequest }) => {
   // Form State
   const [formData, setFormData] = useState({
     serviceName: category.popularServices[0] || category.name,

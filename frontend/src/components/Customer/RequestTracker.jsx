@@ -16,7 +16,7 @@ import { Badge } from '../Shared/Badge';
 
 const LIFECYCLE_STEPS = ['Requested', 'Accepted', 'On the Way', 'In Progress', 'Completed'];
 
-export const RequestTracker = ({ requests, activeRequestId, onSelectRequest, onUpdateStatus, onGoToHistory }) => {
+export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, onUpdateStatus, onGoToHistory }) => {
   const activeRequest = requests.find(r => r.id === activeRequestId) || requests[0];
 
   if (!activeRequest) {

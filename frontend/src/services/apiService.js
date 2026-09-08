@@ -1,250 +1,132 @@
-import { SERVICE_CATEGORIES, LOCATIONS, INITIAL_PROVIDERS, INITIAL_REQUESTS } from './mockData';
+const API_BASE_URL = "http://localhost:5000/api/v1";
 
-const STORAGE_KEYS = {
-  PROVIDERS: 'smarthome_providers_v1',
-  REQUESTS: 'smarthome_requests_v1'
-};
-
-// Helper: simulated network latency (100-250ms) to make UI state feel realistic
-const simulateNetworkDelay = () => new Promise(resolve => setTimeout(resolve, 150));
-
-// Storage helper functions
-const getStoredProviders = () => {
+// 1. Fetch Providers via CSP-MCDM Matching Engine
+export const getProviderMatches = async (requestData) => {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.PROVIDERS);
-    return data ? JSON.parse(data) : INITIAL_PROVIDERS;
-  } catch (err) {
-    console.warn('LocalStorage error, falling back to mock seed data:', err);
-    return INITIAL_PROVIDERS;
-  }
-};
-
-const saveStoredProviders = (providers) => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.PROVIDERS, JSON.stringify(providers));
-  } catch (err) {
-    console.error('Failed to save providers to localStorage:', err);
-  }
-};
-
-const getStoredRequests = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.REQUESTS);
-    return data ? JSON.parse(data) : INITIAL_REQUESTS;
-  } catch (err) {
-    console.warn('LocalStorage error, falling back to mock seed data:', err);
-    return INITIAL_REQUESTS;
-  }
-};
-
-const saveStoredRequests = (requests) => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.REQUESTS, JSON.stringify(requests));
-  } catch (err) {
-    console.error('Failed to save requests to localStorage:', err);
-  }
-};
-
-/**
- * Smart Home API Service Module
- * Clean service layer designed for easy substitution with backend REST/GraphQL APIs (MongoDB, Redis, Node/Express)
- */
-export const apiService = {
-  // 1. Service Categories & Metadata
-  async getServiceCategories() {
-    await simulateNetworkDelay();
-    return SERVICE_CATEGORIES;
-  },
-
-  async getLocations() {
-    await simulateNetworkDelay();
-    return LOCATIONS;
-  },
-
-  // 2. Smart Provider Matching Algorithm
-  async matchProviders({ categoryId, location, urgency = "Normal", preferredTime }) {
-    await simulateNetworkDelay();
-    const providers = getStoredProviders();
-    const requests = getStoredRequests();
-
-    // Find providers offering this category
-    const eligibleProviders = providers.filter(p => p.categoryIds.includes(categoryId));
-
-    const scoredProviders = eligibleProviders.map(p => {
-      // Calculate Distance Score (max 30 pts)
-      const distanceKm = (p.distanceMap && p.distanceMap[location]) || 5.0;
-      const distanceScore = Math.max(0, 30 - distanceKm * 2);
-
-      // Calculate Rating Score (max 25 pts)
-      const ratingScore = (p.rating / 5) * 25;
-
-      // Price Score (max 20 pts)
-      const priceScore = Math.max(5, 20 - (p.baseCharge / 300));
-
-      // Availability & Double-Booking Check (max 25 pts)
-      // Check if provider is already booked for this time slot
-      const isSlotBooked = requests.some(r => 
-        r.providerId === p.id && 
-        r.preferredTime === preferredTime && 
-        ["Accepted", "On the Way", "In Progress"].includes(r.status)
-      );
-
-      let availabilityScore = 25;
-      if (isSlotBooked) {
-        availabilityScore = 0; // Penalty for double booking
-      } else if (p.status !== "Available") {
-        availabilityScore = 10;
-      }
-
-      // Urgency boost for nearby verified providers
-      let urgencyBonus = 0;
-      if (urgency === "Urgent" && distanceKm <= 3.0) {
-        urgencyBonus = 5;
-      }
-
-      const totalScore = Math.min(100, Math.round(distanceScore + ratingScore + priceScore + availabilityScore + urgencyBonus));
-
-      // Estimated price multiplier for urgent requests (+20%)
-      const finalEstimatedCharge = urgency === "Urgent" ? Math.round(p.baseCharge * 1.2) : p.baseCharge;
-
-      return {
-        ...p,
-        distanceKm,
-        matchScore: totalScore,
-        isDoubleBooked: isSlotBooked,
-        estimatedCharge: finalEstimatedCharge,
-        matchReasons: [
-          distanceKm <= 2.5 ? `Close proximity (${distanceKm.toFixed(1)} km)` : `${distanceKm.toFixed(1)} km away`,
-          `⭐ ${p.rating} Rating (${p.reviewsCount} reviews)`,
-          isSlotBooked ? "⚠️ Time slot conflict" : "Slot available & open",
-          p.isVerified ? "Verified Expert Partner" : null
-        ].filter(Boolean)
-      };
+    const response = await fetch(`${API_BASE_URL}/match`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category: requestData.category,
+        location: requestData.location || { lat: 25.7801, lng: 88.8916 }, // BAUST Default
+        start:
+          requestData.preferredDate && requestData.preferredTime
+            ? new Date(
+                `${requestData.preferredDate}T${requestData.preferredTime}:00Z`,
+              ).toISOString()
+            : new Date().toISOString(),
+        end:
+          requestData.preferredDate && requestData.preferredTime
+            ? new Date(
+                new Date(
+                  `${requestData.preferredDate}T${requestData.preferredTime}:00Z`,
+                ).getTime() +
+                  2 * 3600000,
+              ).toISOString()
+            : new Date(Date.now() + 2 * 3600000).toISOString(),
+        urgency: (requestData.urgency || "STANDARD").toUpperCase(),
+      }),
     });
 
-    // Sort by Match Score descending, filtering out double-booked providers if possible
-    return scoredProviders.sort((a, b) => b.matchScore - a.matchScore);
-  },
+    const data = await response.json();
+    if (!data.success)
+      throw new Error(data.error || "Failed to fetch provider matches");
 
-  // 3. Customer Requests CRUD
-  async getRequests() {
-    await simulateNetworkDelay();
-    return getStoredRequests();
-  },
+    // Transform backend match array into UI-friendly structure
+    return data.matches.map((m) => ({
+      id: m.provider._id,
+      fullName: m.provider.fullName,
+      category: m.provider.category,
+      rating: m.provider.rating,
+      hourlyRate: m.provider.hourlyRate,
+      distanceKm: m.distanceKm,
+      matchScore: m.matchScore,
+      matchExplanation: m.matchExplanation,
+      location: m.provider.location,
+    }));
+  } catch (error) {
+    console.error("API Error (getProviderMatches):", error);
+    throw error;
+  }
+};
 
-  async getRequestById(id) {
-    await simulateNetworkDelay();
-    const requests = getStoredRequests();
-    return requests.find(r => r.id === id) || null;
-  },
-
-  async createRequest(requestData) {
-    await simulateNetworkDelay();
-    const requests = getStoredRequests();
-
-    const newId = `REQ-${Math.floor(1000 + Math.random() * 9000)}`;
-    const nowIso = new Date().toISOString();
-
-    const newRequest = {
-      id: newId,
-      ...requestData,
-      status: "Requested",
-      createdAt: nowIso,
-      statusHistory: [
-        {
-          status: "Requested",
-          timestamp: nowIso,
-          note: "Service request submitted by customer"
-        }
-      ]
-    };
-
-    const updatedRequests = [newRequest, ...requests];
-    saveStoredRequests(updatedRequests);
-    return newRequest;
-  },
-
-  async updateRequestStatus(requestId, newStatus, note = "") {
-    await simulateNetworkDelay();
-    const requests = getStoredRequests();
-    const nowIso = new Date().toISOString();
-
-    let updatedRequest = null;
-
-    const updatedRequests = requests.map(req => {
-      if (req.id === requestId) {
-        const history = req.statusHistory || [];
-        const newHistory = [
-          ...history,
-          {
-            status: newStatus,
-            timestamp: nowIso,
-            note: note || `Status updated to ${newStatus}`
-          }
-        ];
-
-        updatedRequest = {
-          ...req,
-          status: newStatus,
-          completedAt: newStatus === "Completed" ? nowIso : req.completedAt,
-          statusHistory: newHistory
-        };
-        return updatedRequest;
-      }
-      return req;
+// 2. Create Booking Record with Pre-calculated Candidate Queue
+export const createServiceRequest = async (bookingPayload) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/bookings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerId: "cust_demo_101",
+        serviceCategory: bookingPayload.category,
+        urgency: (bookingPayload.urgency || "STANDARD").toUpperCase(),
+        bookingStart:
+          bookingPayload.preferredDate && bookingPayload.preferredTime
+            ? new Date(
+                `${bookingPayload.preferredDate}T${bookingPayload.preferredTime}:00Z`,
+              ).toISOString()
+            : new Date().toISOString(),
+        bookingEnd:
+          bookingPayload.preferredDate && bookingPayload.preferredTime
+            ? new Date(
+                new Date(
+                  `${bookingPayload.preferredDate}T${bookingPayload.preferredTime}:00Z`,
+                ).getTime() +
+                  2 * 3600000,
+              ).toISOString()
+            : new Date(Date.now() + 2 * 3600000).toISOString(),
+        location: bookingPayload.location || { lat: 25.7801, lng: 88.8916 },
+        selectedProviderId: bookingPayload.selectedProviderId,
+      }),
     });
 
-    saveStoredRequests(updatedRequests);
-    return updatedRequest;
-  },
+    const data = await response.json();
+    if (!data.success)
+      throw new Error(data.error || "Failed to create booking");
 
-  async submitRating(requestId, rating, feedback) {
-    await simulateNetworkDelay();
-    const requests = getStoredRequests();
-    let updated = null;
+    return data.booking;
+  } catch (error) {
+    console.error("API Error (createServiceRequest):", error);
+    throw error;
+  }
+};
 
-    const updatedRequests = requests.map(req => {
-      if (req.id === requestId) {
-        updated = {
-          ...req,
-          rating,
-          feedback
-        };
-        return updated;
-      }
-      return req;
-    });
-
-    saveStoredRequests(updatedRequests);
-    return updated;
-  },
-
-  // 4. Provider Portal Specific Methods
-  async getProviders() {
-    await simulateNetworkDelay();
-    return getStoredProviders();
-  },
-
-  async getProviderJobs(providerId) {
-    await simulateNetworkDelay();
-    const requests = getStoredRequests();
-    return requests.filter(r => r.providerId === providerId);
-  },
-
-  async updateProviderStatus(providerId, status) {
-    await simulateNetworkDelay();
-    const providers = getStoredProviders();
-    const updatedProviders = providers.map(p => 
-      p.id === providerId ? { ...p, status } : p
+// 3. Update Booking Status (Accept, Reject / Auto-Fallback Trigger, Complete)
+export const updateBookingStatus = async (bookingId, status) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/bookings/${bookingId}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      },
     );
-    saveStoredProviders(updatedProviders);
-    return updatedProviders.find(p => p.id === providerId);
-  },
 
-  // Utility to reset database back to initial state
-  async resetToSeedData() {
-    saveStoredProviders(INITIAL_PROVIDERS);
-    saveStoredRequests(INITIAL_REQUESTS);
-    return { providers: INITIAL_PROVIDERS, requests: INITIAL_REQUESTS };
+    const data = await response.json();
+    if (!data.success)
+      throw new Error(data.error || "Failed to update booking status");
+
+    return data;
+  } catch (error) {
+    console.error("API Error (updateBookingStatus):", error);
+    throw error;
+  }
+};
+
+// 4. Get Active Bookings for Provider Dashboard & Customer Tracking
+export const fetchBookings = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams(filters).toString();
+    const response = await fetch(`${API_BASE_URL}/bookings?${queryParams}`);
+
+    const data = await response.json();
+    if (!data.success)
+      throw new Error(data.error || "Failed to fetch bookings");
+
+    return data.bookings;
+  } catch (error) {
+    console.error("API Error (fetchBookings):", error);
+    throw error;
   }
 };

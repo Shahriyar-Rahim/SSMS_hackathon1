@@ -25,7 +25,7 @@ const ICON_MAP = {
   UserCheck
 };
 
-export const CategoryGrid = ({ categories, onSelectCategory }) => {
+export default CategoryGrid = ({ categories, onSelectCategory }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredCategories = categories.filter(cat => 
