@@ -30,10 +30,6 @@ const AUTH_STORAGE_KEYS = {
 };
 
 export default function App() {
-  const currentUserRole = authUser?.role || "CUSTOMER";
-  const isAdminUser = currentUserRole === "ADMIN";
-  const isProviderUser = currentUserRole === "PROVIDER";
-
   const [authToken, setAuthToken] = useState(
     () => localStorage.getItem(AUTH_STORAGE_KEYS.token) || "",
   );
@@ -41,6 +37,7 @@ export default function App() {
     const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.user);
     return storedUser ? JSON.parse(storedUser) : null;
   });
+  const currentUserRole = authUser?.role || "CUSTOMER";
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({
     fullName: "",
@@ -69,23 +66,6 @@ export default function App() {
       setActiveRole("customer");
       return;
     }
-
-    const mappedRole =
-      authUser.role === "ADMIN"
-        ? "admin"
-        : authUser.role === "PROVIDER"
-          ? "provider"
-          : "customer";
-
-    setActiveRole((prev) => {
-      if (authUser.role === "ADMIN") {
-        return prev === "admin" ? prev : "admin";
-      }
-      if (authUser.role === "PROVIDER") {
-        return "provider";
-      }
-      return "customer";
-    });
 
     if (authUser.role === "ADMIN") {
       setActiveRole("admin");
