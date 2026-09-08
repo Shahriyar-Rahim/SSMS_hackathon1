@@ -57,22 +57,31 @@ export const registerUserAPI = async ({
   email,
   password,
   role = "CUSTOMER",
+  category = "",
+  serviceCategories = [],
 }) => {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ fullName, email, password, role }),
+    body: JSON.stringify({
+      fullName,
+      email,
+      password,
+      role,
+      category,
+      serviceCategories,
+    }),
   });
   const data = await response.json();
   if (!data.success) throw new Error(data.error || "Registration failed");
   return data;
 };
 
-export const loginUserAPI = async ({ email, password }) => {
+export const loginUserAPI = async ({ email, password, category = "" }) => {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, category }),
   });
   const data = await response.json();
   if (!data.success) throw new Error(data.error || "Login failed");
@@ -164,14 +173,23 @@ export const createServiceRequestAPI = async (bookingPayload) => {
   }
 };
 
-export const updateBookingStatusAPI = async (bookingId, status) => {
+export const updateBookingStatusAPI = async (
+  bookingId,
+  payloadOrStatus,
+  extraPayload = {},
+) => {
   try {
+    const bodyPayload =
+      typeof payloadOrStatus === "string"
+        ? { status: payloadOrStatus, ...extraPayload }
+        : payloadOrStatus;
+
     const response = await fetch(
       `${API_BASE_URL}/bookings/${bookingId}/status`,
       {
         method: "PATCH",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(bodyPayload),
       },
     );
 

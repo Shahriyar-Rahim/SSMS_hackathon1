@@ -98,10 +98,10 @@ const Navbar = ({
             </nav>
           )}
 
-          {/* Role Switcher Pill (Customer, Provider, Admin) */}
+          {/* Role Status & Access Control */}
           <div className="flex items-center gap-3">
-            <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
-              {canAccessCustomer && (
+            {userRole === "ADMIN" ? (
+              <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
                 <button
                   onClick={() => setActiveRole("customer")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
@@ -113,8 +113,6 @@ const Navbar = ({
                   <User className="w-3.5 h-3.5 text-slate-500" />
                   Customer Portal
                 </button>
-              )}
-              {canAccessProvider && (
                 <button
                   onClick={() => setActiveRole("provider")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
@@ -126,8 +124,6 @@ const Navbar = ({
                   <Store className="w-3.5 h-3.5 text-indigo-600" />
                   Provider Portal
                 </button>
-              )}
-              {canAccessAdmin && (
                 <button
                   onClick={() => setActiveRole("admin")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
@@ -139,8 +135,16 @@ const Navbar = ({
                   <Shield className="w-3.5 h-3.5 text-emerald-600" />
                   Admin Panel
                 </button>
-              )}
-            </div>
+              </div>
+            ) : userRole === "PROVIDER" ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold shadow-2xs">
+                <Store className="w-3.5 h-3.5 text-indigo-600" /> Provider Portal
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold shadow-2xs">
+                <User className="w-3.5 h-3.5 text-blue-600" /> Customer Portal
+              </div>
+            )}
           </div>
         </div>
 

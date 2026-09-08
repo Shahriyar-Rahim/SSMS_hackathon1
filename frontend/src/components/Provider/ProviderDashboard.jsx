@@ -17,6 +17,11 @@ export default function ProviderDashboard() {
   const [profileMessage, setProfileMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Rate Proposal State
+  const [proposalBookingId, setProposalBookingId] = useState(null);
+  const [proposedRateInput, setProposedRateInput] = useState("");
+  const [proposalReasonInput, setProposalReasonInput] = useState("");
+
   const loadDashboard = async () => {
     try {
       const data = await fetchBookingsAPI();
@@ -42,13 +47,33 @@ export default function ProviderDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAction = async (id, status) => {
+  const handleAction = async (id, statusOrPayload, extraPayload = {}) => {
     try {
-      await updateBookingStatusAPI(id, status);
+      await updateBookingStatusAPI(id, statusOrPayload, extraPayload);
+      setProposalBookingId(null);
+      setProposedRateInput("");
+      setProposalReasonInput("");
       await loadDashboard();
     } catch (err) {
       alert("Action failed: " + err.message);
     }
+  };
+
+  const handleOpenProposal = (booking) => {
+    setProposalBookingId(booking._id);
+    setProposedRateInput(booking.initialHourlyRate || booking.providerId?.hourlyRate || hourlyRate || 700);
+    setProposalReasonInput("");
+  };
+
+  const submitRateProposal = async (bookingId) => {
+    if (!proposedRateInput || Number(proposedRateInput) <= 0) {
+      alert("Please enter a valid proposed hourly rate.");
+      return;
+    }
+    await handleAction(bookingId, "RATE_PROPOSED", {
+      proposedHourlyRate: Number(proposedRateInput),
+      rateProposalReason: proposalReasonInput,
+    });
   };
 
   const toggleCategory = (category) => {
@@ -137,7 +162,7 @@ export default function ProviderDashboard() {
 
         <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-end">
           <label className="text-xs font-semibold text-slate-400">
-            Hourly rate
+            Standard hourly rate (৳/hr)
             <input
               type="number"
               min="0"
@@ -195,27 +220,105 @@ export default function ProviderDashboard() {
                     </p>
                   </div>
                   <div className="text-left md:text-right">
-                    <span className="text-xs font-mono uppercase px-3 py-1 rounded-full bg-slate-800 text-amber-400 border border-slate-700">
-                      {b.status}
+                    <span className={`text-xs font-mono uppercase px-3 py-1 rounded-full border ${b.status === 'RATE_PROPOSED' ? 'bg-amber-500/10 text-amber-300 border-amber-500/40' : 'bg-slate-800 text-amber-400 border-slate-700'}`}>
+                      {b.status === "RATE_PROPOSED" ? "RATE PROPOSAL PENDING" : b.status}
                     </span>
-                    <span className="text-sm font-semibold text-slate-200 block mt-2">
-                      ৳{b.totalPrice}
-                    </span>
+                    <div className="mt-2">
+                      <span className="text-sm font-bold text-slate-200 block">
+                        ৳{b.totalPrice}
+                      </span>
+                      {b.initialHourlyRate && (
+                        <span className="text-[11px] text-slate-400 block">
+                          Base rate: ৳{b.initialHourlyRate}/hr
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* RATE PROPOSAL INLINE FORM FOR PROVIDERS */}
+                {proposalBookingId === b._id && (
+                  <div className="mt-4 p-4 rounded-xl bg-indigo-950/60 border border-indigo-500/40 space-y-3">
+                    <h5 className="text-xs font-bold text-indigo-200">
+                      ✏️ Propose Revised Hourly Rate to Customer
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          New Hourly Rate (৳/hr)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={proposedRateInput}
+                          onChange={(e) => setProposedRateInput(e.target.value)}
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white"
+                          placeholder="e.g. 750"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          Reason for Adjustment (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={proposalReasonInput}
+                          onChange={(e) => setProposalReasonInput(e.target.value)}
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white"
+                          placeholder="e.g. Custom parts or high-voltage diagnostics"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => submitRateProposal(b._id)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1.5 px-4 rounded-lg text-xs"
+                      >
+                        Submit Proposal to Customer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProposalBookingId(null)}
+                        className="bg-slate-800 text-slate-300 font-semibold py-1.5 px-3 rounded-lg text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {b.status === "RATE_PROPOSED" && (
+                  <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between">
+                    <span>
+                      ⏳ Proposed Rate: <strong>৳{b.proposedHourlyRate}/hr</strong> (Total ৳{b.proposedTotalPrice}). Awaiting customer confirmation.
+                    </span>
+                    {b.rateProposalReason && (
+                      <span className="text-[11px] text-amber-300/80 italic">
+                        "{b.rateProposalReason}"
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-3 pt-4 mt-4 border-t border-slate-800">
-                  {b.status === "REQUESTED" && (
+                  {b.status === "REQUESTED" && proposalBookingId !== b._id && (
                     <>
                       <button
                         onClick={() => handleAction(b._id, "ACCEPTED")}
-                        className="flex-1 min-w-32 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded text-xs"
+                        className="flex-1 min-w-32 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs"
                       >
-                        ✓ Accept Job
+                        ✓ Accept Job (৳{b.initialHourlyRate || 600}/hr)
+                      </button>
+                      <button
+                        onClick={() => handleOpenProposal(b)}
+                        className="flex-1 min-w-32 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-xs"
+                      >
+                        ✏️ Propose Rate Change
                       </button>
                       <button
                         onClick={() => handleAction(b._id, "REJECTED")}
-                        className="flex-1 min-w-32 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-semibold py-2 rounded text-xs"
+                        className="flex-1 min-w-32 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-semibold py-2 rounded-lg text-xs"
                       >
                         ✕ Reject
                       </button>
@@ -224,7 +327,7 @@ export default function ProviderDashboard() {
                   {b.status === "ACCEPTED" && (
                     <button
                       onClick={() => handleAction(b._id, "IN_PROGRESS")}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded text-xs"
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-xs"
                     >
                       Start service
                     </button>
@@ -232,7 +335,7 @@ export default function ProviderDashboard() {
                   {b.status === "IN_PROGRESS" && (
                     <button
                       onClick={() => handleAction(b._id, "COMPLETED")}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded text-xs"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-xs"
                     >
                       Mark completed
                     </button>
