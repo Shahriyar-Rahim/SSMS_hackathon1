@@ -1,10 +1,34 @@
-export const authenticate = (req, res, next) => {
-  // Demo Mode: Pull user identity from header or default to mock customer
-  const userId = req.headers["x-user-id"] || "customer_demo_101";
-  const role = req.headers["x-user-role"] || "CUSTOMER";
+import jwt from "jsonwebtoken";
 
-  req.user = { id: userId, role };
-  next();
+const JWT_SECRET = process.env.JWT_SECRET || "dev-smartservice-secret";
+
+export const authenticate = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.replace("Bearer ", "")
+      : null;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: "AUTH_REQUIRED: Missing bearer token.",
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = {
+      id: decoded.userId,
+      role: decoded.role,
+      email: decoded.email,
+    };
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: "TOKEN_INVALID: Authentication token expired or invalid.",
+    });
+  }
 };
 
 export const authorizeRoles = (...roles) => {

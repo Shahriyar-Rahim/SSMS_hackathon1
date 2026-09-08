@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { 
-  Wrench, 
-  Droplet, 
-  Zap, 
-  Sparkles, 
-  Hammer, 
-  Truck, 
-  Car, 
-  UserCheck, 
-  Search, 
+import React, { useState } from "react";
+import {
+  Wrench,
+  Droplet,
+  Zap,
+  Sparkles,
+  Hammer,
+  Truck,
+  Car,
+  UserCheck,
+  Search,
   ChevronRight,
   ShieldCheck,
   ZapIcon,
   CheckCircle2,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 
 const ICON_MAP = {
   Wrench,
@@ -24,21 +24,31 @@ const ICON_MAP = {
   Hammer,
   Truck,
   Car,
-  UserCheck
+  UserCheck,
 };
 
-export default CategoryGrid = ({ categories, onSelectCategory }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+// Added default empty array `categories = []` to prevent TypeError when prop is undefined
+const CategoryGrid = ({ categories = [], onSelectCategory }) => {
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
   };
 
-  const filteredCategories = categories.filter(cat => 
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.popularServices.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Safe filtering with optional chaining and array fallbacks
+  const filteredCategories = categories.filter((cat) => {
+    const nameMatch = cat?.name
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const descMatch = cat?.description
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const popularMatch = (cat?.popularServices || []).some((s) =>
+      s.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    return nameMatch || descMatch || popularMatch;
+  });
 
   return (
     <div className="space-y-8">
@@ -49,18 +59,23 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Available Home Services
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Available Home
+              Services
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Select an Available Service
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Browse our verified service categories below or search for specific appliance repairs
+              Browse our verified service categories below or search for
+              specific appliance repairs
             </p>
           </div>
 
           {/* Search Bar with Explicit Search Button */}
-          <form onSubmit={handleSearchSubmit} className="w-full md:w-auto min-w-[300px] sm:min-w-[380px] lg:min-w-[420px]">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="w-full md:w-auto min-w-[300px] sm:min-w-[380px] lg:min-w-[420px]"
+          >
             <div className="relative flex items-center">
               <Search className="absolute left-4 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
@@ -73,7 +88,7 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setSearchQuery("")}
                   className="absolute right-24 text-slate-400 hover:text-slate-600 p-1"
                 >
                   <X className="w-4 h-4" />
@@ -91,10 +106,9 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
         </div>
       </div>
 
-      {/* Main 2-Column Section: Available Services on Left (Very Top), Basic Texts on Right */}
+      {/* Main 2-Column Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* LEFT COLUMN: Available Services Grid (Very Top) */}
+        {/* LEFT COLUMN: Available Services Grid */}
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -105,7 +119,7 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
             </h2>
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="text-xs font-semibold text-slate-500 hover:text-blue-600 underline"
               >
                 Show all categories
@@ -118,10 +132,14 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
               <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-6 h-6" />
               </div>
-              <p className="text-slate-700 font-bold text-base">No services found for "{searchQuery}"</p>
-              <p className="text-slate-500 text-xs">Try searching for AC, Plumbing, Electrical, or Appliance Repair</p>
+              <p className="text-slate-700 font-bold text-base">
+                No services found for "{searchQuery}"
+              </p>
+              <p className="text-slate-500 text-xs">
+                Try searching for AC, Plumbing, Electrical, or Appliance Repair
+              </p>
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="mt-2 px-4 py-2 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors"
               >
                 Clear Search Filter
@@ -131,10 +149,14 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {filteredCategories.map((category) => {
                 const IconComponent = ICON_MAP[category.iconName] || Wrench;
+                const popularServices = category.popularServices || [];
+
                 return (
                   <div
-                    key={category.id}
-                    onClick={() => onSelectCategory(category)}
+                    key={category.id || category._id}
+                    onClick={() =>
+                      onSelectCategory && onSelectCategory(category)
+                    }
                     className="group bg-white border border-slate-200/80 rounded-2xl p-5 hover:border-blue-500/40 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between relative overflow-hidden"
                   >
                     <div>
@@ -143,7 +165,7 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
                           <IconComponent className="w-5.5 h-5.5" />
                         </div>
                         <span className="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-lg border border-slate-200/70">
-                          {category.basePriceRange}
+                          {category.basePriceRange || "৳300 - ৳1500"}
                         </span>
                       </div>
 
@@ -155,18 +177,23 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
                       </p>
 
                       {/* Popular Services Pills */}
-                      <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap gap-1.5">
-                        {category.popularServices.slice(0, 2).map((item, idx) => (
-                          <span key={idx} className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">
-                            {item}
-                          </span>
-                        ))}
-                        {category.popularServices.length > 2 && (
-                          <span className="text-[11px] font-medium text-slate-400 px-1 py-0.5">
-                            +{category.popularServices.length - 2} more
-                          </span>
-                        )}
-                      </div>
+                      {popularServices.length > 0 && (
+                        <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap gap-1.5">
+                          {popularServices.slice(0, 2).map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                          {popularServices.length > 2 && (
+                            <span className="text-[11px] font-medium text-slate-400 px-1 py-0.5">
+                              +{popularServices.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
@@ -180,17 +207,16 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
           )}
         </div>
 
-        {/* RIGHT COLUMN: Basic Texts & Information Sidebar */}
+        {/* RIGHT COLUMN: Information Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Main Info Card / Hero Banner on Right */}
           <div className="relative bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-7 shadow-xl overflow-hidden border border-slate-800">
-            {/* Glow background accents */}
             <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-blue-600/20 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 -ml-12 -mb-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative z-10 space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-300 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Automated Platform
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Automated
+                Platform
               </div>
 
               <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
@@ -198,7 +224,9 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
               </h2>
 
               <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-normal">
-                Choose your service, set your schedule, and let our match engine instantly assign nearby verified technicians with upfront fixed pricing.
+                Choose your service, set your schedule, and let our match engine
+                instantly assign nearby verified technicians with upfront fixed
+                pricing.
               </p>
 
               <div className="pt-2 border-t border-white/10 space-y-2.5 text-xs font-medium text-slate-200">
@@ -218,7 +246,6 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
             </div>
           </div>
 
-          {/* Basic Information / How It Works Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase">
               How Smart Booking Works
@@ -230,8 +257,12 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
                   1
                 </span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Select Service Category</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Choose from our available appliance & home repair services.</p>
+                  <h4 className="text-xs font-bold text-slate-800">
+                    Select Service Category
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Choose from our available appliance & home repair services.
+                  </p>
                 </div>
               </li>
 
@@ -240,8 +271,12 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
                   2
                 </span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Smart Technician Matching</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Automated engine pairs you with verified technicians nearby.</p>
+                  <h4 className="text-xs font-bold text-slate-800">
+                    Smart Technician Matching
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Automated engine pairs you with verified technicians nearby.
+                  </p>
                 </div>
               </li>
 
@@ -250,17 +285,21 @@ export default CategoryGrid = ({ categories, onSelectCategory }) => {
                   3
                 </span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Live Status & Rating</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Track arrival live and rate your technician after service completion.</p>
+                  <h4 className="text-xs font-bold text-slate-800">
+                    Live Status & Rating
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Track arrival live and rate your technician after service
+                    completion.
+                  </p>
                 </div>
               </li>
             </ul>
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-
+export default CategoryGrid;

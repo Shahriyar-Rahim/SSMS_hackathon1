@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { fetchBookings, updateBookingStatus } from "../../services/apiService";
+import {
+  fetchBookingsAPI,
+  updateBookingStatusAPI,
+} from "../../services/apiService";
 
 export default function ProviderDashboard() {
   const [bookings, setBookings] = useState([]);
@@ -7,7 +10,7 @@ export default function ProviderDashboard() {
 
   const loadBookings = async () => {
     try {
-      const data = await fetchBookings();
+      const data = await fetchBookingsAPI();
       setBookings(data);
     } catch (err) {
       console.error("Failed to load provider bookings:", err);
@@ -24,7 +27,7 @@ export default function ProviderDashboard() {
 
   const handleAction = async (id, status) => {
     try {
-      await updateBookingStatus(id, status);
+      await updateBookingStatusAPI(id, status);
       await loadBookings();
     } catch (err) {
       alert("Action failed: " + err.message);
@@ -90,7 +93,7 @@ export default function ProviderDashboard() {
                 </div>
               </div>
 
-              {/* Controls */}
+              {/* Action Controls */}
               <div className="flex space-x-3 pt-3 border-t border-slate-800">
                 {b.status === "REQUESTED" && (
                   <>

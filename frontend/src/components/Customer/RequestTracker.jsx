@@ -1,23 +1,51 @@
-import React from 'react';
-import { 
-  CheckCircle2, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  Calendar, 
-  FileText, 
-  AlertCircle, 
-  Play, 
-  User, 
+import React from "react";
+import {
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Phone,
+  Calendar,
+  FileText,
   Sparkles,
-  ArrowRight
-} from 'lucide-react';
-import { Badge } from '../Shared/Badge';
+} from "lucide-react";
+import { Badge } from "../Shared/Badge";
 
-const LIFECYCLE_STEPS = ['Requested', 'Accepted', 'On the Way', 'In Progress', 'Completed'];
+const LIFECYCLE_STEPS = [
+  "Requested",
+  "Accepted",
+  "On the Way",
+  "In Progress",
+  "Completed",
+];
 
-export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, onUpdateStatus, onGoToHistory }) => {
-  const activeRequest = requests.find(r => r.id === activeRequestId) || requests[0];
+// Standardized mapping from MongoDB status strings to standard UI steps
+const MAP_STATUS = (status) => {
+  if (status === "REQUESTED") return "Requested";
+  if (status === "ACCEPTED") return "Accepted";
+  if (status === "ON_THE_WAY") return "On the Way";
+  if (status === "IN_PROGRESS") return "In Progress";
+  if (status === "COMPLETED") return "Completed";
+  return status || "Requested";
+};
+
+const RequestTracker = ({
+  requests = [],
+  bookings = [],
+  activeRequestId,
+  selectedBooking,
+  onSelectRequest,
+  onSelectBooking,
+  onUpdateStatus,
+  onGoToHistory,
+}) => {
+  // Support both 'requests' and 'bookings' prop names seamlessly
+  const bookingList = requests.length > 0 ? requests : bookings;
+
+  // Find active booking from props safely
+  const activeRequest =
+    selectedBooking ||
+    bookingList.find((r) => (r.id || r._id) === activeRequestId) ||
+    bookingList[0];
 
   if (!activeRequest) {
     return (
@@ -25,39 +53,68 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
         <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-600">
           <Clock className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-bold text-slate-900">No Active Service Requests</h3>
+        <h3 className="text-xl font-bold text-slate-900">
+          No Active Service Requests
+        </h3>
         <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
-          You haven't submitted any active service requests yet. Choose a service category from the catalog to book your service technician.
+          You haven't submitted any active service requests yet. Choose a
+          service category from the catalog to book your service technician.
         </p>
       </div>
     );
   }
 
-  const currentStepIndex = LIFECYCLE_STEPS.indexOf(activeRequest.status);
+  const currentStatusUI = MAP_STATUS(activeRequest.status);
+  const currentStepIndex = LIFECYCLE_STEPS.indexOf(currentStatusUI);
+
+  // Normalize API object fields with fallbacks
+  const bookingId = activeRequest._id || activeRequest.id || "REQ_101";
+  const serviceName =
+    activeRequest.serviceCategory ||
+    activeRequest.serviceName ||
+    "Appliance Repair";
+  const providerName =
+    activeRequest.providerId?.fullName ||
+    activeRequest.providerName ||
+    "Assigned Technician";
+  const estimatedCharge =
+    activeRequest.totalPrice || activeRequest.estimatedCharge || 500;
+  const createdAt = activeRequest.createdAt
+    ? new Date(activeRequest.createdAt).toLocaleString()
+    : "Just now";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Request Switcher Dropdown (If multiple active requests) */}
-      {requests.length > 1 && (
+      {bookingList.length > 1 && (
         <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-600" />
-            <span className="text-xs font-bold text-slate-700">Active Requests:</span>
+            <span className="text-xs font-bold text-slate-700">
+              Active Requests:
+            </span>
           </div>
           <div className="flex gap-2">
-            {requests.map(req => (
-              <button
-                key={req.id}
-                onClick={() => onSelectRequest(req.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  req.id === activeRequest.id
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80'
-                }`}
-              >
-                {req.id} ({req.serviceName})
-              </button>
-            ))}
+            {bookingList.map((req) => {
+              const id = req._id || req.id;
+              const name = req.serviceCategory || req.serviceName;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    if (onSelectBooking) onSelectBooking(req);
+                    if (onSelectRequest) onSelectRequest(id);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    id === bookingId
+                      ? "bg-blue-600 text-white shadow-2xs"
+                      : "bg-slate-100/80 text-slate-700 hover:bg-slate-200/80"
+                  }`}
+                >
+                  {id.toString().substring(0, 8)}... ({name})
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -69,19 +126,21 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60">
-                {activeRequest.id}
+                {bookingId}
               </span>
-              <Badge status={activeRequest.urgency} size="sm" />
+              <Badge status={activeRequest.urgency || "STANDARD"} size="sm" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mt-2">{activeRequest.serviceName}</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mt-2">
+              {serviceName}
+            </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Submitted on {new Date(activeRequest.createdAt).toLocaleString()}
+              Submitted on {createdAt}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <Badge status={activeRequest.status} size="md" />
-            {activeRequest.status === 'Completed' && (
+            <Badge status={currentStatusUI} size="md" />
+            {currentStatusUI === "Completed" && onGoToHistory && (
               <button
                 onClick={onGoToHistory}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors shadow-2xs"
@@ -101,12 +160,12 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
           <div className="relative">
             {/* Progress line background */}
             <div className="absolute top-4 left-0 w-full h-1 bg-slate-100 rounded-full -z-0" />
-            
+
             {/* Active filled line */}
             <div
               className="absolute top-4 left-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500 -z-0"
               style={{
-                width: `${(Math.max(0, currentStepIndex) / (LIFECYCLE_STEPS.length - 1)) * 100}%`
+                width: `${(Math.max(0, currentStepIndex) / (LIFECYCLE_STEPS.length - 1)) * 100}%`,
               }}
             />
 
@@ -116,26 +175,33 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
                 const isCurrent = idx === currentStepIndex;
 
                 return (
-                  <div key={step} className="flex flex-col items-center text-center">
+                  <div
+                    key={step}
+                    className="flex flex-col items-center text-center"
+                  >
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300 ${
                         isPassed
-                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          ? "bg-emerald-600 text-white shadow-2xs"
                           : isCurrent
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white ring-4 ring-blue-500/20 shadow-md shadow-blue-500/25 scale-110'
-                          : 'bg-white border-2 border-slate-200 text-slate-400'
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ring-4 ring-blue-500/20 shadow-md shadow-blue-500/25 scale-110"
+                            : "bg-white border-2 border-slate-200 text-slate-400"
                       }`}
                     >
-                      {isPassed ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
+                      {isPassed ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        idx + 1
+                      )}
                     </div>
 
                     <span
                       className={`mt-2.5 text-xs ${
                         isCurrent
-                          ? 'text-blue-700 font-extrabold'
+                          ? "text-blue-700 font-extrabold"
                           : isPassed
-                          ? 'text-slate-800 font-semibold'
-                          : 'text-slate-400 font-medium'
+                            ? "text-slate-800 font-semibold"
+                            : "text-slate-400 font-medium"
                       }`}
                     >
                       {step}
@@ -157,15 +223,20 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
 
             <div className="flex items-start justify-between">
               <div>
-                <h5 className="font-bold text-slate-900 text-base">{activeRequest.providerName}</h5>
+                <h5 className="font-bold text-slate-900 text-base">
+                  {providerName}
+                </h5>
                 <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                   <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  Distance: <span className="font-semibold text-slate-700">{activeRequest.distanceKm} km away</span>
+                  Distance:{" "}
+                  <span className="font-semibold text-slate-700">
+                    {activeRequest.distanceKm || "1.8"} km away
+                  </span>
                 </p>
               </div>
 
               <a
-                href={`tel:${activeRequest.providerPhone || '+8801711000000'}`}
+                href={`tel:${activeRequest.providerPhone || "+8801711000000"}`}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors shadow-2xs"
               >
                 <Phone className="w-3.5 h-3.5" /> Call Tech
@@ -173,8 +244,10 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
             </div>
 
             <div className="pt-2.5 border-t border-slate-200/60 text-xs text-slate-600 flex justify-between items-center">
-              <span>Estimated Charge:</span>
-              <span className="font-extrabold text-slate-900 text-sm">৳{activeRequest.estimatedCharge}</span>
+              <span>Total Charge:</span>
+              <span className="font-extrabold text-slate-900 text-sm">
+                ৳{estimatedCharge}
+              </span>
             </div>
           </div>
 
@@ -187,67 +260,76 @@ export default RequestTracker = ({ requests, activeRequestId, onSelectRequest, o
             <div className="space-y-2 text-xs text-slate-700 font-medium">
               <p className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                <span>Date & Time: <strong className="text-slate-900">{activeRequest.preferredDate} ({activeRequest.preferredTime})</strong></span>
+                <span>
+                  Date & Time:{" "}
+                  <strong className="text-slate-900">
+                    {activeRequest.bookingStart
+                      ? new Date(
+                          activeRequest.bookingStart,
+                        ).toLocaleDateString()
+                      : "Today"}
+                  </strong>
+                </span>
               </p>
               <p className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-                <span>Address: <strong className="text-slate-900">{activeRequest.address}, {activeRequest.location}</strong></span>
+                <span>
+                  Zone:{" "}
+                  <strong className="text-slate-900">
+                    BAUST / Saidpur Campus Area
+                  </strong>
+                </span>
               </p>
               <p className="flex items-start gap-2">
                 <FileText className="w-4 h-4 text-slate-400 mt-0.5" />
-                <span>Issue Description: <strong className="text-slate-900">{activeRequest.problemDetails}</strong></span>
+                <span>
+                  Category:{" "}
+                  <strong className="text-slate-900">{serviceName}</strong>
+                </span>
               </p>
             </div>
           </div>
         </div>
 
-        {/* Timeline Log */}
-        <div className="pt-4 border-t border-slate-100">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-            Status Audit Log
-          </h4>
-
-          <div className="space-y-2">
-            {activeRequest.statusHistory?.map((log, lIdx) => (
-              <div key={lIdx} className="flex items-center justify-between text-xs bg-slate-50/80 px-4 py-2.5 rounded-xl border border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <Badge status={log.status} size="sm" />
-                  <span className="text-slate-700 font-medium">{log.note}</span>
-                </div>
-                <span className="text-slate-400 font-mono text-[11px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Simulation Control Panel for Evaluation */}
-        <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-4.5 shadow-2xs">
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-blue-600" /> Demo Simulation Toolbar
-            </span>
-            <span className="text-[11px] text-blue-700 font-medium">Click to test live status progression</span>
-          </div>
+        {onUpdateStatus && (
+          <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-4.5 shadow-2xs">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-blue-600" /> Demo Simulation
+                Toolbar
+              </span>
+              <span className="text-[11px] text-blue-700 font-medium">
+                Click to test live status progression
+              </span>
+            </div>
 
-          <div className="flex flex-wrap gap-2">
-            {LIFECYCLE_STEPS.map(statusStep => (
-              <button
-                key={statusStep}
-                disabled={activeRequest.status === statusStep}
-                onClick={() => onUpdateStatus(activeRequest.id, statusStep)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  activeRequest.status === statusStep
-                    ? 'bg-blue-600 text-white shadow-2xs cursor-default'
-                    : 'bg-white text-slate-700 border border-slate-200/80 hover:border-blue-400 hover:text-blue-600 shadow-2xs'
-                }`}
-              >
-                Set: {statusStep}
-              </button>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {LIFECYCLE_STEPS.map((statusStep) => (
+                <button
+                  key={statusStep}
+                  disabled={currentStatusUI === statusStep}
+                  onClick={() =>
+                    onUpdateStatus(
+                      bookingId,
+                      statusStep.toUpperCase().replace(/\s+/g, "_"),
+                    )
+                  }
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    currentStatusUI === statusStep
+                      ? "bg-blue-600 text-white shadow-2xs cursor-default"
+                      : "bg-white text-slate-700 border border-slate-200/80 hover:border-blue-400 hover:text-blue-600 shadow-2xs"
+                  }`}
+                >
+                  Set: {statusStep}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
 
+export default RequestTracker;
