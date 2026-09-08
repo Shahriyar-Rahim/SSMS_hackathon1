@@ -143,7 +143,7 @@ export const createServiceRequestAPI = async (bookingPayload) => {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        customerId: "cust_demo_101",
+        customerId: bookingPayload.customerId || "cust_demo_101",
         serviceCategory: bookingPayload.category,
         urgency: (bookingPayload.urgency || "STANDARD").toUpperCase(),
         bookingStart: schedule.start,

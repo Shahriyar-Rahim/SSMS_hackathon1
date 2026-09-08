@@ -2,11 +2,18 @@ import mongoose from "mongoose";
 
 const providerSchema = new mongoose.Schema(
   {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    category: { type: String, required: true, index: true }, // e.g., 'Electrical', 'Plumbing'
+    category: {
+      type: String,
+      required: true,
+      index: true,
+      default: "Appliance & Gadget Repair",
+    },
     rating: { type: Number, default: 5.0, min: 1.0, max: 5.0 },
-    hourlyRate: { type: Number, required: true },
+    hourlyRate: { type: Number, required: true, default: 600 },
+    quotedRate: { type: Number, default: 600 },
     maxRadiusKm: { type: Number, default: 15.0 },
     location: {
       lat: { type: Number, required: true },

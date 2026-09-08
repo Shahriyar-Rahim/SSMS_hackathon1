@@ -1,4 +1,5 @@
 import { Booking } from "../models/Booking.js";
+import { Provider } from "../models/Provider.js";
 import { executeMatchingEngine } from "../services/matchingEngine.js";
 import { checkScheduleConflict } from "../services/schedulingEngine.js";
 
@@ -154,14 +155,33 @@ export const getBookings = async (req, res) => {
     const { providerId, customerId, status } = req.query;
     const filter = {};
 
-    if (providerId) filter.providerId = providerId;
-    if (customerId) filter.customerId = customerId;
     if (status) filter.status = status;
+
+    if (req.user.role === "CUSTOMER") {
+      filter.customerId = req.user.id.toString();
+    }
+
+    if (req.user.role === "PROVIDER") {
+      const provider = await Provider.findOne({ userId: req.user.id });
+      if (!provider) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "PROVIDER_PROFILE_REQUIRED: No provider profile match for this account.",
+        });
+      }
+      filter.providerId = provider._id;
+    }
+
+    if (req.user.role === "ADMIN") {
+      if (providerId) filter.providerId = providerId;
+      if (customerId) filter.customerId = customerId;
+    }
 
     const bookings = await Booking.find(filter)
       .populate(
         "providerId",
-        "fullName email category rating hourlyRate location",
+        "fullName email category rating hourlyRate quotedRate location",
       )
       .sort({ createdAt: -1 });
 

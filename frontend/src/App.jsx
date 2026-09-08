@@ -5,6 +5,7 @@ import ServiceRequestForm from "./components/Customer/ServiceRequestForm";
 import ProviderMatch from "./components/Customer/ProviderMatch";
 import RequestTracker from "./components/Customer/RequestTracker";
 import ProviderDashboard from "./components/Provider/ProviderDashboard";
+import AdminDashboard from "./components/Admin/AdminDashboard";
 import {
   fetchCategoriesAPI,
   getProviderMatchesAPI,
@@ -77,12 +78,18 @@ export default function App() {
   };
 
   const loadInitialData = async () => {
-    if (!authToken) return;
+    if (!authToken || !authUser?.id) return;
     try {
       setLoading(true);
+      const filters =
+        authUser.role === "CUSTOMER"
+          ? { customerId: authUser.id }
+          : authUser.role === "PROVIDER"
+            ? {}
+            : {};
       const [cats, bookings] = await Promise.all([
         fetchCategoriesAPI(),
-        fetchBookingsAPI({ customerId: "cust_demo_101" }),
+        fetchBookingsAPI(filters),
       ]);
       setCategories(cats);
       setActiveBookings(bookings);
@@ -106,9 +113,9 @@ export default function App() {
 
     const interval = setInterval(async () => {
       try {
-        const bookings = await fetchBookingsAPI({
-          customerId: "cust_demo_101",
-        });
+        const filters =
+          authUser?.role === "CUSTOMER" ? { customerId: authUser.id } : {};
+        const bookings = await fetchBookingsAPI(filters);
         setActiveBookings(bookings);
         const updated = bookings.find((b) => b._id === selectedBooking._id);
         if (updated) setSelectedBooking(updated);
@@ -138,6 +145,8 @@ export default function App() {
       saveAuthSession(response.token, response.user);
       if (response.user.role === "PROVIDER") {
         setActiveRole("provider");
+      } else if (response.user.role === "ADMIN") {
+        setActiveRole("admin");
       } else {
         setActiveRole("customer");
       }
@@ -175,6 +184,7 @@ export default function App() {
     try {
       const newBooking = await createServiceRequestAPI({
         ...requestData,
+        customerId: authUser?.id,
         selectedProviderId: providerId,
       });
 
@@ -382,8 +392,10 @@ export default function App() {
               />
             )}
           </div>
-        ) : (
+        ) : activeRole === "provider" ? (
           <ProviderDashboard />
+        ) : (
+          <AdminDashboard />
         )}
       </main>
     </div>

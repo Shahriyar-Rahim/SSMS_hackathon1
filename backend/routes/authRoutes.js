@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
+import { Provider } from "../models/Provider.js";
 import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -48,6 +49,25 @@ router.post("/register", async (req, res) => {
           : "CUSTOMER",
       phoneNumber: phoneNumber || "",
     });
+
+    if (user.role === "PROVIDER") {
+      await Provider.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          userId: user._id,
+          fullName: user.fullName,
+          email: normalizedEmail,
+          category: "Appliance & Gadget Repair",
+          hourlyRate: 600,
+          quotedRate: 600,
+          location: { lat: 25.782, lng: 88.895 },
+          isActive: true,
+          rating: 5,
+          skills: [{ name: "Appliance & Gadget Repair", expertiseTier: 1 }],
+        },
+        { upsert: true, new: true },
+      );
+    }
 
     const token = buildToken(user);
 
