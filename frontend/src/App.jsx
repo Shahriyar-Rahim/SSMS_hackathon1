@@ -44,6 +44,10 @@ export default function App() {
     email: "customer@smartservice.com",
     password: "123456",
     role: "CUSTOMER",
+    category: "Appliance & Gadget Repair",
+    hourlyRate: "",
+    latitude: "25.7801",
+    longitude: "88.8916",
   });
   const [authError, setAuthError] = useState("");
 
@@ -156,6 +160,17 @@ export default function App() {
               email: authForm.email,
               password: authForm.password,
               role: authForm.role,
+              ...(authForm.role === "PROVIDER"
+                ? {
+                    category: authForm.category,
+                    serviceCategories: [authForm.category],
+                    hourlyRate: Number(authForm.hourlyRate),
+                    location: {
+                      lat: Number(authForm.latitude),
+                      lng: Number(authForm.longitude),
+                    },
+                  }
+                : {}),
             };
       const response = await handler(payload);
       saveAuthSession(response.token, response.user);
@@ -278,6 +293,71 @@ export default function App() {
                   className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
                   placeholder="Your full name"
                 />
+              </div>
+            )}
+
+            {authMode === "register" && authForm.role === "PROVIDER" && (
+              <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-300">
+                    Primary service
+                  </label>
+                  <select
+                    value={authForm.category}
+                    onChange={(e) =>
+                      setAuthForm({ ...authForm, category: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                  >
+                    <option>Electrical</option>
+                    <option>Plumbing</option>
+                    <option>Appliance &amp; Gadget Repair</option>
+                    <option>Cleaning &amp; Pest Control</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-300">
+                    Your hourly rate
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={authForm.hourlyRate}
+                    onChange={(e) =>
+                      setAuthForm({ ...authForm, hourlyRate: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                    placeholder="Example: 600"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={authForm.latitude}
+                    onChange={(e) =>
+                      setAuthForm({ ...authForm, latitude: e.target.value })
+                    }
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                    placeholder="Latitude"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={authForm.longitude}
+                    onChange={(e) =>
+                      setAuthForm({ ...authForm, longitude: e.target.value })
+                    }
+                    className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                    placeholder="Longitude"
+                  />
+                </div>
+                <p className="text-xs text-amber-300">
+                  Your profile will remain pending until an admin approves it.
+                </p>
               </div>
             )}
 

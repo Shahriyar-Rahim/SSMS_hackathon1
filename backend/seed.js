@@ -19,6 +19,7 @@ const seedProviders = [
     maxRadiusKm: 20,
     location: { lat: 25.782, lng: 88.895 }, // ~0.5 km from BAUST
     isActive: true,
+    approvalStatus: "APPROVED",
     maxDailyCapacity: 6,
     jobsCompletedToday: 2,
     avgResponseTimeMin: 10,
@@ -36,6 +37,7 @@ const seedProviders = [
     maxRadiusKm: 15,
     location: { lat: 25.778, lng: 88.889 }, // ~0.4 km from BAUST
     isActive: true,
+    approvalStatus: "APPROVED",
     maxDailyCapacity: 5,
     jobsCompletedToday: 1,
     avgResponseTimeMin: 15,
@@ -50,6 +52,7 @@ const seedProviders = [
     maxRadiusKm: 25,
     location: { lat: 25.785, lng: 88.9 }, // Saidpur Town (~1.2 km)
     isActive: true,
+    approvalStatus: "APPROVED",
     maxDailyCapacity: 4,
     jobsCompletedToday: 0,
     avgResponseTimeMin: 8,
@@ -67,6 +70,7 @@ const seedProviders = [
     maxRadiusKm: 12,
     location: { lat: 25.75, lng: 88.85 }, // Farther out (~6 km)
     isActive: true,
+    approvalStatus: "APPROVED",
     maxDailyCapacity: 8,
     jobsCompletedToday: 4,
     avgResponseTimeMin: 25,
@@ -81,6 +85,7 @@ const seedProviders = [
     maxRadiusKm: 18,
     location: { lat: 25.79, lng: 88.91 },
     isActive: true,
+    approvalStatus: "APPROVED",
     maxDailyCapacity: 6,
     jobsCompletedToday: 1,
     avgResponseTimeMin: 20,

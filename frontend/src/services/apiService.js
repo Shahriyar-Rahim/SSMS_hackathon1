@@ -52,16 +52,11 @@ const getAuthHeaders = (extra = {}) => {
   };
 };
 
-export const registerUserAPI = async ({
-  fullName,
-  email,
-  password,
-  role = "CUSTOMER",
-}) => {
+export const registerUserAPI = async (payload) => {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ fullName, email, password, role }),
+    body: JSON.stringify(payload),
   });
   const data = await response.json();
   if (!data.success) throw new Error(data.error || "Registration failed");
@@ -223,5 +218,29 @@ export const updateProviderProfileAPI = async (profile) => {
   const data = await response.json();
   if (!data.success)
     throw new Error(data.error || "Failed to update provider profile");
+  return data.provider;
+};
+
+export const fetchAdminProvidersAPI = async () => {
+  const response = await fetch(`${API_BASE_URL}/admin/providers`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.error || "Failed to fetch providers");
+  return data.providers;
+};
+
+export const updateProviderApprovalAPI = async (providerId, payload) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/providers/${providerId}/status`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    },
+  );
+  const data = await response.json();
+  if (!data.success)
+    throw new Error(data.error || "Failed to update provider approval");
   return data.provider;
 };
