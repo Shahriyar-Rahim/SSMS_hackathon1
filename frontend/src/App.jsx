@@ -30,6 +30,10 @@ const AUTH_STORAGE_KEYS = {
 };
 
 export default function App() {
+  const currentUserRole = authUser?.role || "CUSTOMER";
+  const isAdminUser = currentUserRole === "ADMIN";
+  const isProviderUser = currentUserRole === "PROVIDER";
+
   const [authToken, setAuthToken] = useState(
     () => localStorage.getItem(AUTH_STORAGE_KEYS.token) || "",
   );
@@ -59,6 +63,38 @@ export default function App() {
   const [error, setError] = useState(null);
 
   const [requestData, setRequestData] = useState(DEFAULT_REQUEST);
+
+  useEffect(() => {
+    if (!authUser) {
+      setActiveRole("customer");
+      return;
+    }
+
+    const mappedRole =
+      authUser.role === "ADMIN"
+        ? "admin"
+        : authUser.role === "PROVIDER"
+          ? "provider"
+          : "customer";
+
+    setActiveRole((prev) => {
+      if (authUser.role === "ADMIN") {
+        return prev === "admin" ? prev : "admin";
+      }
+      if (authUser.role === "PROVIDER") {
+        return "provider";
+      }
+      return "customer";
+    });
+
+    if (authUser.role === "ADMIN") {
+      setActiveRole("admin");
+    } else if (authUser.role === "PROVIDER") {
+      setActiveRole("provider");
+    } else {
+      setActiveRole("customer");
+    }
+  }, [authUser]);
 
   const saveAuthSession = (token, user) => {
     localStorage.setItem(AUTH_STORAGE_KEYS.token, token);
@@ -152,6 +188,24 @@ export default function App() {
       }
     } catch (err) {
       setAuthError(err.message || "Authentication failed");
+    }
+  };
+
+  const handleRoleChange = (nextRole) => {
+    if (!authUser) return;
+
+    if (authUser.role === "ADMIN") {
+      setActiveRole(nextRole);
+      return;
+    }
+
+    if (authUser.role === "PROVIDER" && nextRole === "provider") {
+      setActiveRole("provider");
+      return;
+    }
+
+    if (authUser.role === "CUSTOMER" && nextRole === "customer") {
+      setActiveRole("customer");
     }
   };
 
@@ -317,7 +371,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       <Navbar
         activeRole={activeRole}
-        setActiveRole={setActiveRole}
+        setActiveRole={handleRoleChange}
+        userRole={currentUserRole}
         customerTab={customerTab}
         setCustomerTab={(tab) => {
           setCustomerTab(tab);
@@ -353,7 +408,11 @@ export default function App() {
           </div>
         )}
 
-        {activeRole === "customer" ? (
+        {currentUserRole === "ADMIN" && activeRole === "admin" ? (
+          <AdminDashboard />
+        ) : currentUserRole === "PROVIDER" || activeRole === "provider" ? (
+          <ProviderDashboard />
+        ) : (
           <div>
             {customerTab === "book" && step === 1 && (
               <CategoryGrid
@@ -392,10 +451,6 @@ export default function App() {
               />
             )}
           </div>
-        ) : activeRole === "provider" ? (
-          <ProviderDashboard />
-        ) : (
-          <AdminDashboard />
         )}
       </main>
     </div>

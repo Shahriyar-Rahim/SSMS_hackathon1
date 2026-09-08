@@ -4,13 +4,16 @@ import { fetchBookingsAPI } from "../../services/apiService";
 const AdminDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const loadBookings = async () => {
     try {
       setLoading(true);
+      setError("");
       const data = await fetchBookingsAPI();
       setBookings(data);
     } catch (err) {
+      setError(err.message || "Failed to load control center data.");
       console.error("Failed to load admin bookings:", err);
     } finally {
       setLoading(false);
@@ -41,6 +44,12 @@ const AdminDashboard = () => {
         </p>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -64,6 +73,18 @@ const AdminDashboard = () => {
           </p>
           <p className="mt-3 text-3xl font-bold text-emerald-400">
             {bookings.filter((b) => b.status === "COMPLETED").length}
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Active assignments
+          </p>
+          <p className="mt-3 text-3xl font-bold text-cyan-400">
+            {
+              bookings.filter((b) => b.providerId && b.status !== "COMPLETED")
+                .length
+            }
           </p>
         </div>
       </div>
