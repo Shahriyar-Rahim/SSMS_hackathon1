@@ -2,7 +2,7 @@ import { Booking } from "../models/Booking.js";
 import { executeMatchingEngine } from "../services/matchingEngine.js";
 import { checkScheduleConflict } from "../services/schedulingEngine.js";
 
-// 1. Create Booking with Atomic Concurrency Guard
+// 1. Create Booking with Atomic Concurrency Guard & Pre-calculated Fallback Queue
 export const createBooking = async (req, res) => {
   try {
     const {
@@ -14,6 +14,18 @@ export const createBooking = async (req, res) => {
       location,
       selectedProviderId,
     } = req.body;
+
+    if (
+      !selectedProviderId ||
+      !serviceCategory ||
+      !bookingStart ||
+      !bookingEnd
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "MISSING_FIELDS: Required booking details are missing.",
+      });
+    }
 
     // Verify candidate availability before writing record
     const isConflicted = await checkScheduleConflict(
@@ -33,9 +45,9 @@ export const createBooking = async (req, res) => {
     const fullMatchResults = await executeMatchingEngine({
       category: serviceCategory,
       location,
-      start: bookingStart,
-      end: bookingEnd,
-      urgency,
+      start: new Date(bookingStart),
+      end: new Date(bookingEnd),
+      urgency: urgency || "STANDARD",
     });
 
     const candidateQueue = fullMatchResults
@@ -46,15 +58,24 @@ export const createBooking = async (req, res) => {
       (r) => r.provider._id.toString() === selectedProviderId,
     );
 
+    // Calculate actual duration in hours (minimum 1 hour)
+    const durationHours = Math.max(
+      1,
+      (new Date(bookingEnd) - new Date(bookingStart)) / (1000 * 60 * 60),
+    );
+
+    const hourlyRate = primaryMatch ? primaryMatch.provider.hourlyRate : 400;
+    const totalPrice = hourlyRate * durationHours;
+
     const booking = await Booking.create({
-      customerId,
+      customerId: customerId || "cust_demo_101",
       providerId: selectedProviderId,
       serviceCategory,
-      urgency,
+      urgency: urgency || "STANDARD",
       bookingStart,
       bookingEnd,
       location,
-      totalPrice: primaryMatch ? primaryMatch.provider.hourlyRate * 2 : 1000,
+      totalPrice,
       matchScore: primaryMatch ? primaryMatch.matchScore : 85.0,
       matchExplanation: primaryMatch ? primaryMatch.matchExplanation : {},
       candidateQueue,
@@ -63,15 +84,22 @@ export const createBooking = async (req, res) => {
 
     res.status(201).json({ success: true, booking });
   } catch (error) {
+    console.error("Error creating booking:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// 2. State Machine & Automated Rescheduling Engine
+// 2. State Machine & Automated Rescheduling Fallback Engine
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // e.g., 'ACCEPTED', 'REJECTED', 'COMPLETED'
+    const { status } = req.body; // 'ACCEPTED', 'REJECTED', 'ON_THE_WAY', 'IN_PROGRESS', 'COMPLETED'
+
+    if (!status) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Status field is required." });
+    }
 
     const booking = await Booking.findById(id);
     if (!booking) {
@@ -82,8 +110,8 @@ export const updateBookingStatus = async (req, res) => {
 
     // AUTOMATED FALLBACK ENGINE: Handles Provider Rejections
     if (status === "REJECTED") {
-      if (booking.candidateQueue.length > 0) {
-        // Pop next best provider from fallback queue
+      if (booking.candidateQueue && booking.candidateQueue.length > 0) {
+        // Pop next best provider from pre-calculated candidate fallback queue
         const nextProviderId = booking.candidateQueue.shift();
 
         booking.providerId = nextProviderId;
@@ -115,6 +143,31 @@ export const updateBookingStatus = async (req, res) => {
 
     res.status(200).json({ success: true, booking });
   } catch (error) {
+    console.error("Error updating booking status:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 3. Fetch Bookings (Required for Provider Dashboard & Customer Tracking)
+export const getBookings = async (req, res) => {
+  try {
+    const { providerId, customerId, status } = req.query;
+    const filter = {};
+
+    if (providerId) filter.providerId = providerId;
+    if (customerId) filter.customerId = customerId;
+    if (status) filter.status = status;
+
+    const bookings = await Booking.find(filter)
+      .populate(
+        "providerId",
+        "fullName email category rating hourlyRate location",
+      )
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: bookings.length, bookings });
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
