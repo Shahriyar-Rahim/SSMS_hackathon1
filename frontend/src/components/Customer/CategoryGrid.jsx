@@ -112,7 +112,7 @@ const CategoryGrid = ({ categories = [], onSelectCategory }) => {
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <span>Service Categories</span>
+              <span className="text-white">Service Categories</span>
               <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">
                 {filteredCategories.length} Available
               </span>

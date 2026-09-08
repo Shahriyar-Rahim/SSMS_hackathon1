@@ -20,6 +20,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Ensure database connection middleware for serverless invocations
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("Database connection failed:", err);
+    res.status(500).json({ error: "Database connection failure" });
+  }
+});
+
 app.use(
   cors({
     origin: true,
@@ -49,11 +60,11 @@ app.get("/health", (req, res) => {
   });
 });
 
-const startServer = async () => {
-  await connectDB();
+// Run server locally only when not in production/serverless environment
+if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`API is running on http://localhost:${PORT}`);
   });
-};
+}
 
-startServer();
+export default app;
