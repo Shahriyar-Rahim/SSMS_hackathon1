@@ -213,6 +213,58 @@ const RequestTracker = ({
           </div>
         </div>
 
+        {/* Rate Proposal Alert Banner for Customer Confirmation */}
+        {activeRequest.status === "RATE_PROPOSED" && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-3.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-extrabold text-amber-900 flex items-center gap-2">
+                ⚠️ Provider Rate Adjustment Proposed
+              </h4>
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-800 border border-amber-300">
+                Action Required
+              </span>
+            </div>
+            <p className="text-xs text-amber-900/90 leading-relaxed">
+              Technician <strong>{providerName}</strong> has reviewed your booking and proposed an adjusted rate:
+            </p>
+            <div className="grid grid-cols-2 gap-3 p-3 bg-white/80 rounded-xl border border-amber-200 text-xs">
+              <div>
+                <span className="text-slate-500 block text-[11px]">Initial Estimate:</span>
+                <span className="font-bold text-slate-800 text-sm">৳{activeRequest.initialTotalPrice || estimatedCharge}</span>
+                {activeRequest.initialHourlyRate && (
+                  <span className="text-[11px] text-slate-400 block">(৳{activeRequest.initialHourlyRate}/hr)</span>
+                )}
+              </div>
+              <div>
+                <span className="text-amber-800 font-semibold block text-[11px]">Proposed Total:</span>
+                <span className="font-extrabold text-amber-900 text-sm">৳{activeRequest.proposedTotalPrice || estimatedCharge}</span>
+                {activeRequest.proposedHourlyRate && (
+                  <span className="text-[11px] text-amber-700 font-medium block">(৳{activeRequest.proposedHourlyRate}/hr)</span>
+                )}
+              </div>
+            </div>
+            {activeRequest.rateProposalReason && (
+              <p className="text-xs text-slate-600 italic bg-amber-100/50 p-2.5 rounded-lg border border-amber-200">
+                Reason: "{activeRequest.rateProposalReason}"
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3 pt-1">
+              <button
+                onClick={() => onUpdateStatus && onUpdateStatus(bookingId, { action: "ACCEPT_RATE" })}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-2xs transition-colors"
+              >
+                ✓ Accept Revised Rate (৳{activeRequest.proposedTotalPrice || estimatedCharge})
+              </button>
+              <button
+                onClick={() => onUpdateStatus && onUpdateStatus(bookingId, { action: "REJECT_RATE" })}
+                className="flex-1 bg-rose-600/10 hover:bg-rose-600/20 text-rose-700 border border-rose-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors"
+              >
+                ✕ Decline & Auto-Reassign
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Assigned Technician & Service Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* Provider Card */}

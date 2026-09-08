@@ -45,9 +45,12 @@ export default function App() {
     password: "123456",
     role: "CUSTOMER",
     category: "Appliance & Gadget Repair",
+<<<<<<< HEAD
     hourlyRate: "",
     latitude: "25.7801",
     longitude: "88.8916",
+=======
+>>>>>>> cf7b1d9b76ab6cc60ad1c456659115aa212bdfd5
   });
   const [authError, setAuthError] = useState("");
 
@@ -64,6 +67,15 @@ export default function App() {
   const [error, setError] = useState(null);
 
   const [requestData, setRequestData] = useState(DEFAULT_REQUEST);
+
+  const CATEGORY_OPTIONS = [
+    "Appliance & Gadget Repair",
+    "Plumbing Services",
+    "Electrical Repair & Installation",
+    "Cleaning & Sanitization",
+    "HVAC & AC Maintenance",
+    "Carpentry & Furniture Repair",
+  ];
 
   useEffect(() => {
     if (!authUser) {
@@ -147,6 +159,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, [selectedBooking?._id, authToken]);
 
+  const handleAuthRoleSelect = (selectedRole) => {
+    setAuthForm((prev) => ({
+      ...prev,
+      role: selectedRole,
+      email:
+        selectedRole === "PROVIDER"
+          ? "provider@smartservice.com"
+          : "customer@smartservice.com",
+    }));
+  };
+
   const handleAuthSubmit = async (event) => {
     event.preventDefault();
     setAuthError("");
@@ -154,7 +177,11 @@ export default function App() {
       const handler = authMode === "login" ? loginUserAPI : registerUserAPI;
       const payload =
         authMode === "login"
-          ? { email: authForm.email, password: authForm.password }
+          ? {
+              email: authForm.email,
+              password: authForm.password,
+              ...(authForm.role === "PROVIDER" ? { category: authForm.category } : {}),
+            }
           : {
               fullName: authForm.fullName,
               email: authForm.email,
@@ -164,11 +191,14 @@ export default function App() {
                 ? {
                     category: authForm.category,
                     serviceCategories: [authForm.category],
+<<<<<<< HEAD
                     hourlyRate: Number(authForm.hourlyRate),
                     location: {
                       lat: Number(authForm.latitude),
                       lng: Number(authForm.longitude),
                     },
+=======
+>>>>>>> cf7b1d9b76ab6cc60ad1c456659115aa212bdfd5
                   }
                 : {}),
             };
@@ -188,19 +218,8 @@ export default function App() {
 
   const handleRoleChange = (nextRole) => {
     if (!authUser) return;
-
     if (authUser.role === "ADMIN") {
       setActiveRole(nextRole);
-      return;
-    }
-
-    if (authUser.role === "PROVIDER" && nextRole === "provider") {
-      setActiveRole("provider");
-      return;
-    }
-
-    if (authUser.role === "CUSTOMER" && nextRole === "customer") {
-      setActiveRole("customer");
     }
   };
 
@@ -250,40 +269,99 @@ export default function App() {
 
   if (!authToken || !authUser) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-md">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 font-bold text-white">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 font-bold text-white shadow-md">
               S
             </div>
-            <h1 className="text-2xl font-bold">SmartService Access</h1>
-            <p className="mt-2 text-sm text-slate-400">
-              Secure dispatcher portal
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              SmartService Portal
+            </h1>
+            <p className="mt-1 text-xs text-slate-400 font-medium">
+              Select your portal role to sign in or register
             </p>
           </div>
 
-          <div className="mb-5 flex rounded-xl border border-slate-700 bg-slate-800/60 p-1">
+          {/* FIX 1: TOP-LEVEL CUSTOMER VS PROVIDER ROLE SELECTOR */}
+          <div className="mb-6">
+            <label className="mb-2 block text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+              Step 1: Choose Account Portal
+            </label>
+            <div className="grid grid-cols-2 gap-3 p-1 bg-slate-800/80 rounded-2xl border border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => handleAuthRoleSelect("CUSTOMER")}
+                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-extrabold transition-all duration-200 ${
+                  authForm.role === "CUSTOMER"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md ring-2 ring-blue-400/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                <span>👤</span> Customer Portal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAuthRoleSelect("PROVIDER")}
+                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-extrabold transition-all duration-200 ${
+                  authForm.role === "PROVIDER"
+                    ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md ring-2 ring-indigo-400/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                <span>🛠️</span> Provider Portal
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-tabs: Login / Register */}
+          <div className="mb-5 flex rounded-xl border border-slate-700 bg-slate-800/50 p-1">
             <button
               type="button"
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${authMode === "login" ? "bg-indigo-600 text-white" : "text-slate-300"}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${authMode === "login" ? "bg-indigo-600 text-white shadow-2xs" : "text-slate-400 hover:text-white"}`}
               onClick={() => setAuthMode("login")}
             >
-              Login
+              Sign In
             </button>
             <button
               type="button"
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${authMode === "register" ? "bg-indigo-600 text-white" : "text-slate-300"}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${authMode === "register" ? "bg-indigo-600 text-white shadow-2xs" : "text-slate-400 hover:text-white"}`}
               onClick={() => setAuthMode("register")}
             >
-              Register
+              Create Account
             </button>
           </div>
+
+          {/* FIX 1: PROVIDER SERVICE CATEGORY SELECTION */}
+          {authForm.role === "PROVIDER" && (
+            <div className="mb-5 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 space-y-2">
+              <label className="block text-xs font-bold text-indigo-200">
+                🛠️ What service category do you want to provide service to?
+              </label>
+              <select
+                value={authForm.category}
+                onChange={(e) =>
+                  setAuthForm({ ...authForm, category: e.target.value })
+                }
+                className="w-full rounded-xl border border-indigo-400/40 bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+              >
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-indigo-300/80">
+                You will receive customer dispatch requests matching this service specialization.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
             {authMode === "register" && (
               <div>
                 <label className="mb-1 block text-xs font-semibold text-slate-300">
-                  Full name
+                  Full Name
                 </label>
                 <input
                   value={authForm.fullName}
@@ -363,7 +441,7 @@ export default function App() {
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-300">
-                Email
+                Email Address
               </label>
               <input
                 type="email"
@@ -391,24 +469,6 @@ export default function App() {
               />
             </div>
 
-            {authMode === "register" && (
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-300">
-                  Role
-                </label>
-                <select
-                  value={authForm.role}
-                  onChange={(e) =>
-                    setAuthForm({ ...authForm, role: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
-                >
-                  <option value="CUSTOMER">Customer</option>
-                  <option value="PROVIDER">Provider</option>
-                </select>
-              </div>
-            )}
-
             {authError && (
               <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                 {authError}
@@ -417,9 +477,11 @@ export default function App() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-500"
+              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-all"
             >
-              {authMode === "login" ? "Login" : "Create account"}
+              {authMode === "login"
+                ? `Sign In to ${authForm.role === "PROVIDER" ? "Provider" : "Customer"} Portal`
+                : `Register ${authForm.role === "PROVIDER" ? "Provider Account" : "Customer Account"}`}
             </button>
           </form>
         </div>
@@ -470,7 +532,7 @@ export default function App() {
 
         {currentUserRole === "ADMIN" && activeRole === "admin" ? (
           <AdminDashboard />
-        ) : currentUserRole === "PROVIDER" || activeRole === "provider" ? (
+        ) : currentUserRole === "PROVIDER" || (currentUserRole === "ADMIN" && activeRole === "provider") ? (
           <ProviderDashboard />
         ) : (
           <div>
@@ -507,6 +569,14 @@ export default function App() {
                 onNewBooking={() => {
                   setCustomerTab("book");
                   setStep(1);
+                }}
+                onUpdateStatus={async (id, payloadOrStatus) => {
+                  try {
+                    await updateBookingStatusAPI(id, payloadOrStatus);
+                    await loadInitialData();
+                  } catch (err) {
+                    setError(err.message);
+                  }
                 }}
               />
             )}
