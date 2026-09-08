@@ -52,33 +52,11 @@ const getAuthHeaders = (extra = {}) => {
   };
 };
 
-<<<<<<< HEAD
 export const registerUserAPI = async (payload) => {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
-=======
-export const registerUserAPI = async ({
-  fullName,
-  email,
-  password,
-  role = "CUSTOMER",
-  category = "",
-  serviceCategories = [],
-}) => {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      fullName,
-      email,
-      password,
-      role,
-      category,
-      serviceCategories,
-    }),
->>>>>>> cf7b1d9b76ab6cc60ad1c456659115aa212bdfd5
   });
   const data = await response.json();
   if (!data.success) throw new Error(data.error || "Registration failed");
