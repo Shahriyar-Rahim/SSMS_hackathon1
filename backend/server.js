@@ -20,6 +20,7 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 app.use((req, res, next) => {
+  console.log("REQUEST", req.method, req.originalUrl);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
