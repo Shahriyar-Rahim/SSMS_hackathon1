@@ -19,6 +19,7 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: [
         "REQUESTED",
+        "RATE_PROPOSED",
         "ACCEPTED",
         "ON_THE_WAY",
         "IN_PROGRESS",
@@ -29,6 +30,21 @@ const bookingSchema = new mongoose.Schema(
       default: "REQUESTED",
       index: true,
     },
+    initialHourlyRate: { type: Number },
+    proposedHourlyRate: { type: Number },
+    initialTotalPrice: { type: Number },
+    proposedTotalPrice: { type: Number },
+    rateProposalStatus: {
+      type: String,
+      enum: [
+        "NONE",
+        "PROPOSED_BY_PROVIDER",
+        "ACCEPTED_BY_CUSTOMER",
+        "REJECTED_BY_CUSTOMER",
+      ],
+      default: "NONE",
+    },
+    rateProposalReason: { type: String, default: "" },
     bookingStart: { type: Date, required: true, index: true },
     bookingEnd: { type: Date, required: true, index: true },
     location: {

@@ -21,7 +21,7 @@ const buildToken = (user) =>
 
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password, role, phoneNumber } = req.body;
+    const { fullName, email, password, role, phoneNumber, category, serviceCategories } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({
@@ -51,20 +51,23 @@ router.post("/register", async (req, res) => {
     });
 
     if (user.role === "PROVIDER") {
+      const selectedCategory = category || (Array.isArray(serviceCategories) && serviceCategories[0]) || "Appliance & Gadget Repair";
+      const categoriesList = Array.isArray(serviceCategories) && serviceCategories.length > 0 ? serviceCategories : [selectedCategory];
+      
       await Provider.findOneAndUpdate(
         { email: normalizedEmail },
         {
           userId: user._id,
           fullName: user.fullName,
           email: normalizedEmail,
-          category: "Appliance & Gadget Repair",
-          serviceCategories: ["Appliance & Gadget Repair"],
+          category: selectedCategory,
+          serviceCategories: categoriesList,
           hourlyRate: 600,
           quotedRate: 600,
           location: { lat: 25.782, lng: 88.895 },
           isActive: true,
           rating: 5,
-          skills: [{ name: "Appliance & Gadget Repair", expertiseTier: 1 }],
+          skills: categoriesList.map((name) => ({ name, expertiseTier: 1 })),
         },
         { upsert: true, new: true },
       );
@@ -91,7 +94,7 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, category } = req.body;
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -109,6 +112,17 @@ router.post("/login", async (req, res) => {
         success: false,
         error: "Invalid email or password.",
       });
+    }
+
+    if (user.role === "PROVIDER" && category) {
+      await Provider.findOneAndUpdate(
+        { userId: user._id },
+        {
+          $set: { category },
+          $addToSet: { serviceCategories: category },
+        },
+        { upsert: false },
+      );
     }
 
     const token = buildToken(user);

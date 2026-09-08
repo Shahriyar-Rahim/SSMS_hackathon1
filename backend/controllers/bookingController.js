@@ -65,7 +65,7 @@ export const createBooking = async (req, res) => {
       (new Date(bookingEnd) - new Date(bookingStart)) / (1000 * 60 * 60),
     );
 
-    const hourlyRate = primaryMatch ? primaryMatch.provider.hourlyRate : 400;
+    const hourlyRate = primaryMatch ? primaryMatch.provider.hourlyRate : 600;
     const totalPrice = hourlyRate * durationHours;
 
     const booking = await Booking.create({
@@ -79,6 +79,8 @@ export const createBooking = async (req, res) => {
       bookingStart,
       bookingEnd,
       location,
+      initialHourlyRate: hourlyRate,
+      initialTotalPrice: totalPrice,
       totalPrice,
       matchScore: primaryMatch ? primaryMatch.matchScore : 85.0,
       matchExplanation: primaryMatch ? primaryMatch.matchExplanation : {},
@@ -97,12 +99,12 @@ export const createBooking = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 'ACCEPTED', 'REJECTED', 'ON_THE_WAY', 'IN_PROGRESS', 'COMPLETED'
+    const { status, action, proposedHourlyRate, rateProposalReason } = req.body;
 
-    if (!status) {
+    if (!status && !action) {
       return res
         .status(400)
-        .json({ success: false, error: "Status field is required." });
+        .json({ success: false, error: "Status or action field is required." });
     }
 
     const booking = await Booking.findById(id);
@@ -112,7 +114,22 @@ export const updateBookingStatus = async (req, res) => {
         .json({ success: false, error: "Booking not found" });
     }
 
-    if (req.user.role === "PROVIDER") {
+    // Role-based authorization check
+    if (req.user.role === "CUSTOMER") {
+      if (booking.customerId !== req.user.id.toString()) {
+        return res.status(403).json({
+          success: false,
+          error: "ACCESS_DENIED: You can only manage your own bookings.",
+        });
+      }
+      // Allow customer to accept/reject rate or cancel booking
+      if (!action && status !== "CANCELLED") {
+        return res.status(403).json({
+          success: false,
+          error: "ACCESS_DENIED: Customers can only accept/reject proposed rates or cancel.",
+        });
+      }
+    } else if (req.user.role === "PROVIDER") {
       const provider = await Provider.findOne({ userId: req.user.id });
       if (
         !provider ||
@@ -126,18 +143,96 @@ export const updateBookingStatus = async (req, res) => {
     } else if (req.user.role !== "ADMIN") {
       return res.status(403).json({
         success: false,
-        error: "ACCESS_DENIED: Customers cannot update booking status.",
+        error: "ACCESS_DENIED: Insufficient permissions.",
+      });
+    }
+
+    // CUSTOMER RATE RESPONSE ACTIONS
+    if (action === "ACCEPT_RATE") {
+      if (booking.status !== "RATE_PROPOSED") {
+        return res.status(400).json({
+          success: false,
+          error: "INVALID_ACTION: Booking is not in RATE_PROPOSED status.",
+        });
+      }
+      booking.totalPrice = booking.proposedTotalPrice || booking.totalPrice;
+      booking.status = "ACCEPTED";
+      booking.rateProposalStatus = "ACCEPTED_BY_CUSTOMER";
+      await booking.save();
+      return res.status(200).json({
+        success: true,
+        message: "RATE_ACCEPTED: Customer accepted proposed rate change.",
+        booking,
+      });
+    }
+
+    if (action === "REJECT_RATE") {
+      booking.rateProposalStatus = "REJECTED_BY_CUSTOMER";
+      // Trigger automated fallback reassignment or cancel
+      if (booking.candidateQueue && booking.candidateQueue.length > 0) {
+        const nextProviderId = booking.candidateQueue.shift();
+        booking.providerId = nextProviderId;
+        booking.status = "REQUESTED";
+        booking.proposedHourlyRate = undefined;
+        booking.proposedTotalPrice = undefined;
+        await booking.save();
+
+        return res.status(200).json({
+          success: true,
+          message:
+            "RATE_REJECTED_DISPATCH: Customer rejected rate proposal. Reassigned automatically to fallback provider.",
+          reassigned: true,
+          booking,
+        });
+      } else {
+        booking.status = "CANCELLED";
+        await booking.save();
+        return res.status(200).json({
+          success: true,
+          message: "RATE_REJECTED: Customer rejected rate proposal. No fallbacks available.",
+          reassigned: false,
+          booking,
+        });
+      }
+    }
+
+    // PROVIDER RATE PROPOSAL ACTION
+    if (status === "RATE_PROPOSED") {
+      const parsedProposedRate = Number(proposedHourlyRate);
+      if (!Number.isFinite(parsedProposedRate) || parsedProposedRate <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "INVALID_RATE: A valid proposed hourly rate is required.",
+        });
+      }
+
+      const durationHours = Math.max(
+        1,
+        (new Date(booking.bookingEnd) - new Date(booking.bookingStart)) /
+          (1000 * 60 * 60),
+      );
+
+      booking.proposedHourlyRate = parsedProposedRate;
+      booking.proposedTotalPrice = parsedProposedRate * durationHours;
+      booking.rateProposalReason = String(rateProposalReason || "").trim();
+      booking.rateProposalStatus = "PROPOSED_BY_PROVIDER";
+      booking.status = "RATE_PROPOSED";
+
+      await booking.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "RATE_PROPOSED: Rate change submitted for customer confirmation.",
+        booking,
       });
     }
 
     // AUTOMATED FALLBACK ENGINE: Handles Provider Rejections
     if (status === "REJECTED") {
       if (booking.candidateQueue && booking.candidateQueue.length > 0) {
-        // Pop next best provider from pre-calculated candidate fallback queue
         const nextProviderId = booking.candidateQueue.shift();
-
         booking.providerId = nextProviderId;
-        booking.status = "REQUESTED"; // Reset state for new provider
+        booking.status = "REQUESTED";
         await booking.save();
 
         return res.status(200).json({
