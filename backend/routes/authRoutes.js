@@ -58,6 +58,7 @@ router.post("/register", async (req, res) => {
           fullName: user.fullName,
           email: normalizedEmail,
           category: "Appliance & Gadget Repair",
+          serviceCategories: ["Appliance & Gadget Repair"],
           hourlyRate: 600,
           quotedRate: 600,
           location: { lat: 25.782, lng: 88.895 },

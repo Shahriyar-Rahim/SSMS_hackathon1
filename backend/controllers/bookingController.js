@@ -69,7 +69,10 @@ export const createBooking = async (req, res) => {
     const totalPrice = hourlyRate * durationHours;
 
     const booking = await Booking.create({
-      customerId: customerId || "cust_demo_101",
+      customerId:
+        req.user.role === "CUSTOMER"
+          ? req.user.id.toString()
+          : customerId || req.user.id.toString(),
       providerId: selectedProviderId,
       serviceCategory,
       urgency: urgency || "STANDARD",
@@ -107,6 +110,24 @@ export const updateBookingStatus = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, error: "Booking not found" });
+    }
+
+    if (req.user.role === "PROVIDER") {
+      const provider = await Provider.findOne({ userId: req.user.id });
+      if (
+        !provider ||
+        booking.providerId.toString() !== provider._id.toString()
+      ) {
+        return res.status(403).json({
+          success: false,
+          error: "ACCESS_DENIED: This booking is assigned to another provider.",
+        });
+      }
+    } else if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        error: "ACCESS_DENIED: Customers cannot update booking status.",
+      });
     }
 
     // AUTOMATED FALLBACK ENGINE: Handles Provider Rejections

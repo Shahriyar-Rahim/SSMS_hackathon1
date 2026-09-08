@@ -11,6 +11,11 @@ const providerSchema = new mongoose.Schema(
       index: true,
       default: "Appliance & Gadget Repair",
     },
+    serviceCategories: {
+      type: [String],
+      default: ["Appliance & Gadget Repair"],
+      index: true,
+    },
     rating: { type: Number, default: 5.0, min: 1.0, max: 5.0 },
     hourlyRate: { type: Number, required: true, default: 600 },
     quotedRate: { type: Number, default: 600 },

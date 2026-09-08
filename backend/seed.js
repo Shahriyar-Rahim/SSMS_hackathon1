@@ -2,11 +2,11 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { Provider } from "./models/Provider.js";
 import { Booking } from "./models/Booking.js";
+import { User } from "./models/User.js";
 
 dotenv.config();
 
-const MONGO_URI =
-  process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI;
 
 // Mock Providers centered around BAUST / Saidpur Campus Area
 const seedProviders = [
@@ -98,7 +98,14 @@ const seedData = async () => {
 
     console.log("[Seed] Cleaned existing collections");
 
-    const createdProviders = await Provider.insertMany(seedProviders);
+    const linkedProviders = await Promise.all(
+      seedProviders.map(async (provider) => {
+        const user = await User.findOne({ email: provider.email });
+        return user ? { ...provider, userId: user._id } : provider;
+      }),
+    );
+
+    const createdProviders = await Provider.insertMany(linkedProviders);
     console.log(`[Seed] Inserted ${createdProviders.length} mock providers.`);
 
     console.log("[Seed] Seed completed successfully!");

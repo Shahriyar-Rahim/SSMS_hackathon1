@@ -203,3 +203,25 @@ export const fetchBookingsAPI = async (filters = {}) => {
     throw error;
   }
 };
+
+export const fetchProviderProfileAPI = async () => {
+  const response = await fetch(`${API_BASE_URL}/providers/me`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await response.json();
+  if (!data.success)
+    throw new Error(data.error || "Failed to fetch provider profile");
+  return data.provider;
+};
+
+export const updateProviderProfileAPI = async (profile) => {
+  const response = await fetch(`${API_BASE_URL}/providers/me`, {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(profile),
+  });
+  const data = await response.json();
+  if (!data.success)
+    throw new Error(data.error || "Failed to update provider profile");
+  return data.provider;
+};

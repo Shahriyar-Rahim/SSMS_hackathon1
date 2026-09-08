@@ -6,13 +6,13 @@ import dns from "dns";
 import matchRoutes from "./routes/matchRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import providerRoutes from "./routes/providerRoutes.js";
 
 try {
   dns.setServers(["8.8.8.8", "1.1.1.1"]);
 } catch (err) {
   console.warn("dns.setServers skipped:", err.message);
 }
-  
 
 dotenv.config();
 
@@ -35,6 +35,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/providers", providerRoutes);
 app.use("/api/v1/match", matchRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 
