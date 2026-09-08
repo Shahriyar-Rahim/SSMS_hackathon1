@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:5000/api/v1";
+// const API_BASE_URL = "http://localhost:5000/api/v1";
+const API_BASE_URL = "https://ssmsbackend.vercel.app/api/v1";
 
 const getStoredToken = () => localStorage.getItem("smartservice_token");
 
